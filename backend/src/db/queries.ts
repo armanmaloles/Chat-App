@@ -12,9 +12,7 @@ import {
   type NewMessage,
 } from "./schema";
 
-/* ============================
-   USER QUERIES
-============================ */
+// USER QUERIES
 
 export const createUser = async (data: NewUser) => {
   const [user] = await db.insert(users).values(data).returning();
@@ -53,9 +51,7 @@ export const upsertUser = async (data: NewUser) => {
   return user;
 };
 
-/* ============================
-   CONVERSATION QUERIES
-============================ */
+// CONVERSATION QUERIES
 
 export const createConversation = async (
   data: NewConversation
@@ -104,9 +100,7 @@ export const getUserConversations = async (
   });
 };
 
-/* ============================
-   MEMBER QUERIES
-============================ */
+// CONVERSATION MEMBER QUERIES
 
 export const addMemberToConversation = async (
   data: NewConversationMember
@@ -151,9 +145,7 @@ export const getConversationMembers = async (
   });
 };
 
-/* ============================
-   MESSAGE QUERIES
-============================ */
+// MESSAGE QUERIES
 
 export const sendMessage = async (
   data: NewMessage

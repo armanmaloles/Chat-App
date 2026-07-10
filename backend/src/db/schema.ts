@@ -8,9 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-/* ============================
-   USERS
-============================ */
+// USERS
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(), // Clerk ID
@@ -32,9 +30,7 @@ export const users = pgTable("users", {
     .$onUpdate(() => new Date()),
 });
 
-/* ============================
-   CONVERSATIONS
-============================ */
+// CONVERSATIONS
 
 export const conversations = pgTable("conversations", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -58,9 +54,7 @@ export const conversations = pgTable("conversations", {
     .defaultNow(),
 });
 
-/* ============================
-   CONVERSATION MEMBERS
-============================ */
+//CONVERSATION MEMBERS
 
 export const conversationMembers = pgTable(
   "conversation_members",
@@ -90,9 +84,7 @@ export const conversationMembers = pgTable(
   }),
 );
 
-/* ============================
-   MESSAGES
-============================ */
+// MESSAGES
 
 export const messages = pgTable("messages", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -125,10 +117,7 @@ export const messages = pgTable("messages", {
     .$onUpdate(() => new Date()),
 });
 
-/* =====================================================
-   RELATIONS
-===================================================== */
-
+// RELATIONS
 // USERS
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -184,9 +173,7 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
-/* =====================================================
-   TYPES
-===================================================== */
+// TYPES
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
