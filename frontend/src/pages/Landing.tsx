@@ -7,11 +7,14 @@ import {
   SignUpButton,
   UserButton,
   useAuth,
+  useUser,
 } from "@clerk/clerk-react";
+import { upsertUser } from "../api";
 import "./landing.css";
 
 function Landing() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, getToken } = useAuth();
+  const { user } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,6 +22,29 @@ function Landing() {
       navigate("/app/conversations");
     }
   }, [isSignedIn, navigate]);
+
+  useEffect(() => {
+    const syncUser = async () => {
+      if (!isSignedIn || !user?.id) return;
+
+      try {
+        const token = await getToken();
+        await upsertUser(
+          {
+            id: user.id,
+            email: user.primaryEmailAddress?.emailAddress ?? null,
+            name: user.fullName ?? user.username ?? "User",
+            imageUrl: user.imageUrl,
+          },
+          token,
+        );
+      } catch (error) {
+        console.error("Failed to sync user", error);
+      }
+    };
+
+    void syncUser();
+  }, [getToken, isSignedIn, user?.id, user?.fullName, user?.username, user?.imageUrl, user?.primaryEmailAddress?.emailAddress]);
 
   return (
     <div className="landing-container">

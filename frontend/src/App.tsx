@@ -10,7 +10,7 @@ function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/app" element={<ChatLayout />}>
         <Route index element={<Navigate to="/app/conversations" replace />} />
-        <Route path="conversations" element={<div />} />
+        <Route path="conversations" element={<></>} />
         <Route path="favorites" element={<div />} />
         <Route path="groups" element={<div />} />
         <Route path="notifications" element={<div />} />

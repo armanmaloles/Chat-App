@@ -5,6 +5,7 @@ import {
   getUserHandler,
   updateUserHandler,
   upsertUserHandler,
+  getUsersHandler,
 } from "../controllers/usersController";
 
 const router = express.Router();
@@ -13,6 +14,7 @@ router.use(requireAuth);
 
 router.post("/users", createUserHandler);
 router.post("/users/upsert", upsertUserHandler);
+router.get("/users", getUsersHandler);
 router.get("/users/:id", getUserHandler);
 router.put("/users/:id", updateUserHandler);
 

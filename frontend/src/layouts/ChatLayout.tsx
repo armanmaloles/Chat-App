@@ -35,10 +35,27 @@ function NotificationBell() {
 const ChatLayout = () => {
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const path = location.pathname || "";
 
   useEffect(() => {
     if (!isSignedIn) navigate("/");
   }, [isSignedIn, navigate]);
+
+  const showChatPlaceholder = !path.startsWith("/app/chat/");
+  let content;
+  if (path.startsWith("/app/favorites")) {
+    content = <Favorites />;
+  } else if (path.startsWith("/app/groups")) {
+    content = <Groups />;
+  } else if (path.startsWith("/app/notifications")) {
+    content = <Notifications />;
+  } else if (path.startsWith("/app/settings")) {
+    content = <Settings />;
+  } else {
+    content = <ConversationList />;
+  }
+
   return (
     <div className="app-root">
       <header className="app-navbar">
@@ -64,21 +81,17 @@ const ChatLayout = () => {
           <Sidebar />
         </aside>
 
-        <section className="app-conversations">
-          {(() => {
-            const loc = useLocation();
-            const path = loc.pathname || "";
-            if (path.startsWith("/app/favorites")) return <Favorites />;
-            if (path.startsWith("/app/groups")) return <Groups />;
-            if (path.startsWith("/app/notifications")) return <Notifications />;
-            if (path.startsWith("/app/settings")) return <Settings />;
-            // default to conversations
-            return <ConversationList />;
-          })()}
-        </section>
+        <section className="app-conversations">{content}</section>
 
         <section className="app-chat">
-          <Outlet />
+          {showChatPlaceholder ? (
+            <div className="app-chat__empty">
+              <h2>Select a conversation</h2>
+              <p>Choose a chat from the list to start messaging. Your selected conversation will appear here.</p>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </section>
       </div>
     </div>

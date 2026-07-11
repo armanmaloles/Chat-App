@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { createUser, getUserById, updateUser, upsertUser } from "../db/queries";
+import { createUser, getAllUsers, getUserById, updateUser, upsertUser } from "../db/queries";
 
 export const createUserHandler = async (req: Request, res: Response) => {
   try {
@@ -18,6 +18,16 @@ export const upsertUserHandler = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Upsert user error:", error);
     res.status(500).json({ error: "Failed to save user" });
+  }
+};
+
+export const getUsersHandler = async (_req: Request, res: Response) => {
+  try {
+    const users = await getAllUsers();
+    return res.status(200).json(users);
+  } catch (error) {
+    console.error("Get users error:", error);
+    return res.status(500).json({ error: "Failed to fetch users" });
   }
 };
 

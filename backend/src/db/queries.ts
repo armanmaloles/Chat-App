@@ -1,5 +1,5 @@
 import { db } from "./index";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 import {
   users,
@@ -23,6 +23,10 @@ export const getUserById = async (id: string) => {
   return db.query.users.findFirst({
     where: eq(users.id, id),
   });
+};
+
+export const getAllUsers = async () => {
+  return db.query.users.findMany();
 };
 
 export const updateUser = async (
@@ -95,7 +99,23 @@ export const getUserConversations = async (
     where: eq(conversationMembers.userId, userId),
 
     with: {
-      conversation: true,
+      conversation: {
+        with: {
+          creator: true,
+          members: {
+            with: {
+              user: true,
+            },
+          },
+          messages: {
+            with: {
+              sender: true,
+            },
+            orderBy: (messages, { desc }) => [desc(messages.createdAt)],
+            limit: 1,
+          },
+        },
+      },
     },
   });
 };
