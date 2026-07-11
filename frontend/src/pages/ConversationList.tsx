@@ -122,12 +122,10 @@ const ConversationList = () => {
   return (
     <div className="page page--conversation-list">
       <h1>Conversations</h1>
+      <UserList showActions />
       <div className="conversation-list">
         {conversations.length === 0 ? (
-          <>
-            <div className="conversation-list__empty">No conversations yet.</div>
-            <UserList showActions />
-          </>
+          <div className="conversation-list__empty">No conversations yet.</div>
         ) : (
           conversations.map((entry) => {
             const currentUserId = user?.id;

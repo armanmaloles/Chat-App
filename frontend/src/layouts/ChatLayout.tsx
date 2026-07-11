@@ -5,7 +5,7 @@ import Favorites from "../pages/Favorites";
 import Groups from "../pages/Groups";
 import Notifications from "../pages/Notifications";
 import Settings from "../pages/Settings";
-import { UserButton, useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NotificationsModal from "../components/NotificationsModal";
@@ -69,9 +69,6 @@ const ChatLayout = () => {
           <input className="app-search" placeholder="Search chats" />
           <div style={{ position: "relative" }}>
             <NotificationBell />
-          </div>
-          <div style={{ marginLeft: 8 }}>
-            <UserButton afterSignOutUrl="/" />
           </div>
         </div>
       </header>

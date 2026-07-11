@@ -42,6 +42,21 @@ export const updateUser = async (
   return user;
 };
 
+export const deleteUser = async (id: string) => {
+  const [user] = await db
+    .update(users)
+    .set({
+      email: `${id}@deleted.local`,
+      name: "Deleted User",
+      imageUrl: null,
+      isDeleted: true,
+    })
+    .where(eq(users.id, id))
+    .returning();
+
+  return user;
+};
+
 export const upsertUser = async (data: NewUser) => {
   const [user] = await db
     .insert(users)

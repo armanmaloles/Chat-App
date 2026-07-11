@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { createUser, getAllUsers, getUserById, updateUser, upsertUser } from "../db/queries";
+import { createUser, getAllUsers, getUserById, updateUser, upsertUser, deleteUser } from "../db/queries";
 
 export const createUserHandler = async (req: Request, res: Response) => {
   try {
@@ -60,5 +60,31 @@ export const updateUserHandler = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Update user error:", error);
     return res.status(500).json({ error: "Failed to update user" });
+  }
+};
+
+export const deleteUserHandler = async (req: Request, res: Response) => {
+  try {
+    const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const authUserId = (req as any).auth?.userId;
+
+    if (!authUserId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (authUserId !== userId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const user = await deleteUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.status(200).json({ message: "User account deleted" });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    return res.status(500).json({ error: "Failed to delete user" });
   }
 };

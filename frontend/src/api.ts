@@ -45,6 +45,9 @@ export const updateUser = async (
   token?: string | null,
 ) => apiClient.put(`/users/${id}`, payload, { headers: getAuthHeaders(token) });
 
+export const deleteUser = async (id: string, token?: string | null) =>
+  apiClient.delete(`/users/${id}`, { headers: getAuthHeaders(token) });
+
 export const createConversation = async (
   payload: ConversationPayload,
   token?: string | null,
