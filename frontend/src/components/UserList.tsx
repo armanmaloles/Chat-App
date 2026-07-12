@@ -32,7 +32,7 @@ type UserListProps = {
 const UserList = ({ conversationId, showActions = false }: UserListProps) => {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [startingChatId, setStartingChatId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { getToken } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
@@ -74,7 +74,6 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
   const handleStartChat = async (userId: string) => {
     if (!user?.id || conversationId) return;
 
-    setStartingChatId(userId);
     try {
       const token = await getToken();
       const existingResponse = await getUserConversations(user.id, token);
@@ -112,8 +111,6 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
       navigate(`/app/chat/${conversationId}`);
     } catch (error) {
       console.error("Failed to start chat", error);
-    } finally {
-      setStartingChatId(null);
     }
   };
 
@@ -126,18 +123,32 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
     }
   };
 
+  const filteredUsers = users.filter((userItem) =>
+    userItem.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (userItem.email && userItem.email.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   return (
     <div className="user-list">
       <h3 className="user-list__title">{title}</h3>
+      {!conversationId && (
+        <input
+          type="text"
+          placeholder="Search users by name or email"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="user-list__search"
+        />
+      )}
       {isLoading ? (
         <p className="user-list__empty">Loading users…</p>
-      ) : users.length === 0 ? (
+      ) : filteredUsers.length === 0 ? (
         <p className="user-list__empty">
-          {conversationId ? "No members yet." : "No other users available to chat with."}
+          {conversationId ? "No members yet." : searchQuery ? "No users found." : "No other users available to chat with."}
         </p>
       ) : (
         <ul className="user-list__items">
-          {users.map((userItem) => (
+          {filteredUsers.map((userItem) => (
             <li
               key={userItem.id}
               className={`user-list__item${!conversationId && showActions ? " user-list__item--clickable user-list__item--stacked" : ""}`}

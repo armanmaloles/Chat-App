@@ -3,8 +3,25 @@ import ChatLayout from "./layouts/ChatLayout";
 import ChatRoom from "./pages/ChatRoom";
 import NotFound from "./pages/NotFound";
 import Landing from "./pages/Landing";
+import ServerConnectionError from "./components/ServerConnectionError";
+import { useServerConnection } from "./context/ServerConnectionContext";
 
 function App() {
+  const { isServerReachable, checkConnection } = useServerConnection();
+
+  if (isServerReachable === null) {
+    return (
+      <div className="app-loading">
+        <div className="app-loading__spinner"></div>
+        <p>Checking connection...</p>
+      </div>
+    );
+  }
+
+  if (!isServerReachable) {
+    return <ServerConnectionError onRetry={checkConnection} />;
+  }
+
   return (
     <Routes>
       <Route path="/" element={<Landing />} />

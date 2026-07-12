@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { getConversationMessages, sendMessage } from "../api";
 import MessageBubble from "./MessageBubble";
@@ -26,12 +26,57 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isConversationLoaded, setIsConversationLoaded] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const { getToken } = useAuth();
   const { user } = useUser();
 
+  const markConversationRead = (conversationId?: string) => {
+    if (!conversationId) return;
+    const now = new Date().toISOString();
+    localStorage.setItem(`chatApp:conversation:read:${conversationId}`, now);
+    window.dispatchEvent(new Event("conversationRead"));
+  };
+
+  const prevConversationIdRef = useRef<string | undefined>(undefined);
+
+  const getDraftKey = (id?: string) => `chatApp:draft:${id}`;
+
+  const saveDraft = (id?: string, text: string = "") => {
+    if (!id) return;
+    localStorage.setItem(getDraftKey(id), text);
+  };
+
+  const loadDraft = (id?: string) => {
+    if (!id) return "";
+    return localStorage.getItem(getDraftKey(id)) || "";
+  };
+
+  useEffect(() => {
+    // Save previous conversation's draft
+    if (prevConversationIdRef.current) {
+      saveDraft(prevConversationIdRef.current, draft);
+    }
+
+    // Load current conversation's draft
+    const newDraft = loadDraft(conversationId);
+    setDraft(newDraft);
+
+    // Update ref
+    prevConversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  useEffect(() => {
+    // Save draft to localStorage whenever it changes
+    saveDraft(conversationId, draft);
+  }, [draft, conversationId]);
+
   useEffect(() => {
     const loadMessages = async () => {
-      if (!conversationId) return;
+      if (!conversationId) {
+        setIsConversationLoaded(false);
+        return;
+      }
 
       try {
         const token = await getToken();
@@ -49,13 +94,40 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
             createdAt: message.createdAt,
           })),
         );
+
+        setIsConversationLoaded(true);
+        markConversationRead(conversationId);
       } catch (error) {
         console.error("Failed to load messages", error);
+        setIsConversationLoaded(false);
       }
     };
 
     void loadMessages();
+    const intervalId = window.setInterval(() => void loadMessages(), 5000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void loadMessages();
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [conversationId, getToken, user?.id]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  };
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages.length]);
 
   const handleSend = async () => {
     if (!draft.trim() || !conversationId || !user?.id) return;
@@ -87,6 +159,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
 
       setMessages((current) => [...current, newChatMessage]);
       setDraft("");
+      requestAnimationFrame(() => scrollToBottom());
 
       window.dispatchEvent(
         new CustomEvent("conversationUpdated", {
@@ -112,22 +185,33 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
   return (
     <section className="chat-window">
       <div className="chat-window__messages">
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            author={message.author}
-            content={message.content}
-            createdAt={message.createdAt}
-            isOwn={message.senderId === user?.id}
-          />
-        ))}
+        {messages.length === 0 ? (
+          <div className="chat-window__empty">
+            <div className="chat-window__empty-icon">💬</div>
+            <h2>Start a conversation</h2>
+            <p>Send the first message to begin chatting</p>
+          </div>
+        ) : (
+          messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              author={message.author}
+              content={message.content}
+              createdAt={message.createdAt}
+              isOwn={message.senderId === user?.id}
+            />
+          ))
+        )}
+        <div ref={messagesEndRef} />
       </div>
-      <MessageInput
-        value={draft}
-        onChange={setDraft}
-        onSend={handleSend}
-        disabled={isSending}
-      />
+      {isConversationLoaded && conversationId && (
+        <MessageInput
+          value={draft}
+          onChange={setDraft}
+          onSend={handleSend}
+          disabled={isSending}
+        />
+      )}
     </section>
   );
 };

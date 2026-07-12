@@ -9,7 +9,23 @@ const MessageBubble = ({ author, content, createdAt, isOwn = false }: MessageBub
   const formatBubbleTime = (dateString?: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const now = new Date();
+    const isSameDay =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+
+    if (!isSameDay) {
+      const dateLabel = date.toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      return `${dateLabel} ${time}`;
+    }
+
+    return time;
   };
 
   return (

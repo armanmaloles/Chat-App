@@ -35,6 +35,7 @@ const formatRelativeTime = (dateString?: string) => {
 
 const ConversationList = () => {
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
+  const [readTimestamps, setReadTimestamps] = useState<Record<string, string>>({});
   const { getToken } = useAuth();
   const { user } = useUser();
   const location = useLocation();
@@ -111,11 +112,45 @@ const ConversationList = () => {
       });
     };
 
+    const loadReadState = () => {
+      const keys = Object.keys(localStorage).filter((key) => key.startsWith("chatApp:conversation:read:"));
+      const timestamps: Record<string, string> = {};
+      keys.forEach((key) => {
+        const conversationId = key.replace("chatApp:conversation:read:", "");
+        const value = localStorage.getItem(key);
+        if (value) timestamps[conversationId] = value;
+      });
+      setReadTimestamps(timestamps);
+    };
+
     void loadConversations();
+    loadReadState();
+    const intervalId = window.setInterval(() => void loadConversations(), 5000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void loadConversations();
+      }
+    };
+    const handleReadEvent = () => {
+      loadReadState();
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key?.startsWith("chatApp:conversation:read:")) {
+        loadReadState();
+      }
+    };
+
     window.addEventListener("conversationUpdated", handleConversationUpdate);
+    window.addEventListener("conversationRead", handleReadEvent);
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      window.clearInterval(intervalId);
       window.removeEventListener("conversationUpdated", handleConversationUpdate);
+      window.removeEventListener("conversationRead", handleReadEvent);
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [getToken, user?.id]);
 
@@ -137,6 +172,15 @@ const ConversationList = () => {
             const senderName = lastMessage?.sender?.id === currentUserId ? "You" : lastMessage?.sender?.name || "Unknown";
             const subtitle = lastMessage ? `${senderName}: ${lastMessage.content}` : "Tap to open chat";
             const time = formatRelativeTime(lastMessage?.createdAt);
+            const isActive = location.pathname === `/app/chat/${entry.conversation.id}`;
+            const lastReadAt = readTimestamps[entry.conversation.id]
+              ? new Date(readTimestamps[entry.conversation.id])
+              : null;
+            const isUnread = Boolean(
+              lastMessage &&
+                !isActive &&
+                (!lastReadAt || (lastMessage.createdAt && new Date(lastMessage.createdAt) > lastReadAt)),
+            );
 
             return (
               <Link
@@ -164,11 +208,11 @@ const ConversationList = () => {
                 </div>
                 <div className="conversation-list__details">
                   <div className="conversation-list__name">{title}</div>
-                  <div className="conversation-list__subtitle">{subtitle}</div>
+                  <div className={`conversation-list__subtitle${isUnread ? " conversation-list__subtitle--unread" : ""}`}>{subtitle}</div>
                 </div>
                 <div className="conversation-list__meta">
                   <span className="conversation-list__time">{time}</span>
-                  {lastMessage && <span className="conversation-list__badge" />}
+                  {lastMessage && isUnread && <span className="conversation-list__badge" />}
                 </div>
               </Link>
             );

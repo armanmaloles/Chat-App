@@ -66,7 +66,6 @@ const ChatLayout = () => {
         </div>
 
         <div className="app-navbar__right">
-          <input className="app-search" placeholder="Search chats" />
           <div style={{ position: "relative" }}>
             <NotificationBell />
           </div>
