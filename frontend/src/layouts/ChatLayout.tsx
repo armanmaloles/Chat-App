@@ -1,7 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import ConversationList from "../pages/ConversationList";
-import Favorites from "../pages/Favorites";
 import Groups from "../pages/Groups";
 import Notifications from "../pages/Notifications";
 import Settings from "../pages/Settings";
@@ -42,11 +41,13 @@ const ChatLayout = () => {
     if (!isSignedIn) navigate("/");
   }, [isSignedIn, navigate]);
 
-  const showChatPlaceholder = !path.startsWith("/app/chat/");
+  const showChatPlaceholder = !(
+    path.startsWith("/app/chat/") ||
+    (path.startsWith("/app/groups/") && path !== "/app/groups")
+  );
+  const hideChatOnSettings = path.startsWith("/app/settings");
   let content;
-  if (path.startsWith("/app/favorites")) {
-    content = <Favorites />;
-  } else if (path.startsWith("/app/groups")) {
+  if (path.startsWith("/app/groups")) {
     content = <Groups />;
   } else if (path.startsWith("/app/notifications")) {
     content = <Notifications />;
@@ -79,16 +80,18 @@ const ChatLayout = () => {
 
         <section className="app-conversations">{content}</section>
 
-        <section className="app-chat">
-          {showChatPlaceholder ? (
-            <div className="app-chat__empty">
-              <h2>Select a conversation</h2>
-              <p>Choose a chat from the list to start messaging. Your selected conversation will appear here.</p>
-            </div>
-          ) : (
-            <Outlet />
-          )}
-        </section>
+        {!hideChatOnSettings && (
+          <section className="app-chat">
+            {showChatPlaceholder ? (
+              <div className="app-chat__empty">
+                <h2>Select a conversation</h2>
+                <p>Choose a chat from the list to start messaging. Your selected conversation will appear here.</p>
+              </div>
+            ) : (
+              <Outlet />
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

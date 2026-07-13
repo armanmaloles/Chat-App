@@ -6,7 +6,8 @@ import { getConversation } from "../api";
 
 const ChatRoom = () => {
   const { id } = useParams();
-  const [otherName, setOtherName] = useState<string>("");
+  const [title, setTitle] = useState<string>("");
+  const [subtitle, setSubtitle] = useState<string>("");
   const { getToken } = useAuth();
   const { user } = useUser();
 
@@ -19,22 +20,36 @@ const ChatRoom = () => {
         const response = await getConversation(id, token);
         const conversation = response.data as {
           name?: string | null;
+          isGroup?: boolean;
           creator?: { id?: string; name?: string | null };
           members?: Array<{ user?: { id?: string; name?: string | null; email?: string | null } }>;
         };
 
-        const otherUser = conversation.members?.find(
-          (member) => member.user?.id && member.user.id !== user.id,
-        )?.user;
+        if (conversation.isGroup) {
+          const groupName = conversation.name || "Group chat";
+          const memberNames = conversation.members
+            ?.map((member) => member.user)
+            .filter((userInfo): userInfo is { id: string; name?: string | null; email?: string | null } => Boolean(userInfo && userInfo.id !== user.id))
+            .map((member) => member.name || member.email || "Unknown")
+            .join(", ");
 
-        const name =
-          otherUser?.name ||
-          otherUser?.email ||
-          conversation.creator?.name ||
-          conversation.name ||
-          "Unknown";
+          setTitle(groupName);
+          setSubtitle(memberNames ? `Members: ${memberNames}` : "Group chat");
+        } else {
+          const otherUser = conversation.members?.find(
+            (member) => member.user?.id && member.user.id !== user.id,
+          )?.user;
 
-        setOtherName(name);
+          const name =
+            otherUser?.name ||
+            otherUser?.email ||
+            conversation.creator?.name ||
+            conversation.name ||
+            "Unknown";
+
+          setTitle(`Chat with ${name}`);
+          setSubtitle("");
+        }
       } catch (error) {
         console.error("Failed to load conversation", error);
       }
@@ -46,7 +61,8 @@ const ChatRoom = () => {
   return (
     <div className="page page--chat-room">
       <header className="chat-room__header">
-        <h1>Chat with {otherName || (id ? `Conversation ${id}` : "Unknown")}</h1>
+        <h1>{title || (id ? `Conversation ${id}` : "Unknown")}</h1>
+        {subtitle && <p>{subtitle}</p>}
       </header>
       <ChatWindow conversationId={id} />
     </div>

@@ -28,8 +28,8 @@ function App() {
       <Route path="/app" element={<ChatLayout />}>
         <Route index element={<Navigate to="/app/conversations" replace />} />
         <Route path="conversations" element={<></>} />
-        <Route path="favorites" element={<div />} />
         <Route path="groups" element={<div />} />
+        <Route path="groups/:id" element={<ChatRoom />} />
         <Route path="notifications" element={<div />} />
         <Route path="chat/:id" element={<ChatRoom />} />
         <Route path="settings" element={<div />} />
