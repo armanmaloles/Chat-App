@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
-import { getConversationMessages, sendMessage } from "../api";
+import {
+  getConversationMessages,
+  sendMessage,
+  setTypingStatus,
+  getTypingStatus,
+} from "../api";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 
@@ -27,7 +32,10 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isConversationLoaded, setIsConversationLoaded] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<Array<{ userId: string; userName: string }>>([]);
+  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const typingDebounceRef = useRef<number | null>(null);
   const { getToken } = useAuth();
   const { user } = useUser();
 
@@ -80,10 +88,13 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
 
       try {
         const token = await getToken();
-        const response = await getConversationMessages(conversationId, token);
+        const [messagesResponse, typingResponse] = await Promise.all([
+          getConversationMessages(conversationId, token),
+          getTypingStatus(conversationId, token),
+        ]);
 
         setMessages(
-          response.data.map((message: BackendMessage) => ({
+          messagesResponse.data.map((message: BackendMessage) => ({
             id: message.id,
             author:
               message.sender?.id === user?.id
@@ -93,6 +104,10 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
             senderId: message.sender?.id || "",
             createdAt: message.createdAt,
           })),
+        );
+
+        setTypingUsers(
+          typingResponse.data.filter((typingUser: { userId: string }) => typingUser.userId !== user?.id),
         );
 
         setIsConversationLoaded(true);
@@ -129,6 +144,39 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
     }
   }, [messages.length]);
 
+  const updateTypingStatus = async (typing: boolean) => {
+    if (!conversationId || !user?.id) return;
+
+    try {
+      const token = await getToken();
+      await setTypingStatus(
+        conversationId,
+        { userId: user.id, isTyping: typing },
+        token,
+      );
+      setIsTyping(typing);
+    } catch (error) {
+      console.error("Failed to update typing status", error);
+    }
+  };
+
+  const handleDraftChange = (value: string) => {
+    setDraft(value);
+
+    if (!conversationId || !user?.id) return;
+
+    updateTypingStatus(true);
+
+    if (typingDebounceRef.current) {
+      window.clearTimeout(typingDebounceRef.current);
+    }
+
+    typingDebounceRef.current = window.setTimeout(() => {
+      void updateTypingStatus(false);
+      typingDebounceRef.current = null;
+    }, 1500);
+  };
+
   const handleSend = async () => {
     if (!draft.trim() || !conversationId || !user?.id) return;
 
@@ -159,6 +207,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
 
       setMessages((current) => [...current, newChatMessage]);
       setDraft("");
+      void updateTypingStatus(false);
       requestAnimationFrame(() => scrollToBottom());
 
       window.dispatchEvent(
@@ -204,14 +253,25 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
         )}
         <div ref={messagesEndRef} />
       </div>
-      {isConversationLoaded && conversationId && (
-        <MessageInput
-          value={draft}
-          onChange={setDraft}
-          onSend={handleSend}
-          disabled={isSending}
-        />
-      )}
+      <div className="chat-window__footer">
+        {typingUsers.length > 0 && (
+          <div className="chat-window__typing-indicator">
+            {typingUsers.length === 1 ? (
+              <span>{typingUsers[0].userName} is typing…</span>
+            ) : (
+              <span>Multiple people are typing…</span>
+            )}
+          </div>
+        )}
+        {isConversationLoaded && conversationId && (
+          <MessageInput
+            value={draft}
+            onChange={handleDraftChange}
+            onSend={handleSend}
+            disabled={isSending}
+          />
+        )}
+      </div>
     </section>
   );
 };

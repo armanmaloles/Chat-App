@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
 ];
 
 const Sidebar = () => {
+  const location = useLocation();
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
       const raw = localStorage.getItem("chatApp:sidebarCollapsed");
@@ -27,38 +28,40 @@ const Sidebar = () => {
 
   return (
     <div className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}>
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <div className="sidebar__toggle-wrapper">
         <button
+          type="button"
+          className="sidebar__toggle-btn"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           onClick={() => setCollapsed((c) => !c)}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#cbd5e1",
-            cursor: "pointer",
-            fontSize: 16,
-            padding: 6,
-          }}
         >
-          {collapsed ? ">" : "<"}
+          <span className="sidebar__toggle-icon">{collapsed ? ">" : "<"}</span>
         </button>
       </div>
 
       <nav className="sidebar__nav">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              `sidebar__nav-item ${isActive ? "active" : ""}`
-            }
-            title={item.label}
-          >
-            <span className="sidebar__nav-icon">{item.icon}</span>
-            <span className="sidebar__nav-label">{item.label}</span>
-          </NavLink>
-        ))}
+        {navItems.map((item) => {
+          const itemActive =
+            item.to === "/app/conversations"
+              ? location.pathname.startsWith("/app/conversations") ||
+                location.pathname.startsWith("/app/chat")
+              : location.pathname === item.to;
+
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={() =>
+                `sidebar__nav-item ${itemActive ? "active" : ""}`
+              }
+              title={item.label}
+            >
+              <span className="sidebar__nav-icon">{item.icon}</span>
+              <span className="sidebar__nav-label">{item.label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
     </div>
   );

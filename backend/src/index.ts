@@ -7,6 +7,7 @@ import usersRoutes from "./routes/usersRoutes";
 import conversationsRoutes from "./routes/conversationsRoutes";
 import conversationMembersRoutes from "./routes/conversationMembersRoutes";
 import messagesRoutes from "./routes/messagesRoutes";
+import typingRoutes from "./routes/typingRoutes";
 
 const app = express();
 app.use(cors({ origin: ENV.FRONTEND_URL }));
@@ -19,6 +20,7 @@ app.use("/api", usersRoutes);
 app.use("/api", conversationsRoutes);
 app.use("/api", conversationMembersRoutes);
 app.use("/api", messagesRoutes);
+app.use("/api", typingRoutes);
 
 app.get("/", (req, res) => {
   res.json({

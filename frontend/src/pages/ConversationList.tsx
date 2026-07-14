@@ -3,7 +3,6 @@ import { useAuth, useUser } from "@clerk/clerk-react";
 import { Link, useLocation } from "react-router-dom";
 import { getUserConversations } from "../api";
 import UserList from "../components/UserList";
-import "../index.css";
 
 type ConversationItem = {
   conversation: {
@@ -46,10 +45,24 @@ const ConversationList = () => {
   const [readTimestamps, setReadTimestamps] = useState<Record<string, string>>(
     {},
   );
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("chatApp:conversationListCollapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
   const { getToken } = useAuth();
   const { user } = useUser();
   const location = useLocation();
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("chatApp:conversationListCollapsed", collapsed ? "1" : "0");
+    } catch {
+      /* noop */
+    }
+  }, [collapsed]);
 
   useEffect(() => {
     const loadConversations = async () => {
@@ -176,6 +189,9 @@ const ConversationList = () => {
   const personalConversations = conversations.filter(
     (entry) => !entry.conversation.isGroup,
   );
+  const selectedConversationId = location.pathname.startsWith("/app/chat/")
+    ? location.pathname.split("/").pop()
+    : null;
 
   return (
     <div
@@ -243,7 +259,7 @@ const ConversationList = () => {
                         <Link
                           key={entry.conversation.id}
                           to={`/app/chat/${entry.conversation.id}`}
-                          className={`conversation-list__item${location.pathname === `/app/chat/${entry.conversation.id}` ? " conversation-list__item--active" : ""}`}
+                          className={`conversation-list__item${selectedConversationId === entry.conversation.id ? " conversation-list__item--active" : ""}`}
                         >
                           <div className="conversation-list__avatar">
                             {otherUser?.imageUrl ? (

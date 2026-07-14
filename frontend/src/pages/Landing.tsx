@@ -10,7 +10,7 @@ import {
   useUser,
 } from "@clerk/clerk-react";
 import { upsertUser } from "../api";
-import "./landing.css";
+import "../styles/landing.css";
 
 function Landing() {
   const { isSignedIn, getToken } = useAuth();

@@ -1,6 +1,23 @@
 import type { Request, Response } from "express";
 import { createUser, getAllUsers, getUserById, updateUser, upsertUser, deleteUser } from "../db/queries";
 
+const activeStatuses = new Map<string, number>();
+const ACTIVE_TIMEOUT_MS = 30000;
+
+const cleanupActiveStatuses = () => {
+  const now = Date.now();
+  for (const [userId, lastSeen] of activeStatuses.entries()) {
+    if (now - lastSeen > ACTIVE_TIMEOUT_MS) {
+      activeStatuses.delete(userId);
+    }
+  }
+};
+
+const formatUserWithActive = (user: any) => ({
+  ...user,
+  isActive: activeStatuses.has(user.id),
+});
+
 export const createUserHandler = async (req: Request, res: Response) => {
   try {
     const user = await createUser(req.body);
@@ -23,11 +40,29 @@ export const upsertUserHandler = async (req: Request, res: Response) => {
 
 export const getUsersHandler = async (_req: Request, res: Response) => {
   try {
+    cleanupActiveStatuses();
     const users = await getAllUsers();
-    return res.status(200).json(users);
+    return res.status(200).json(users.map(formatUserWithActive));
   } catch (error) {
     console.error("Get users error:", error);
     return res.status(500).json({ error: "Failed to fetch users" });
+  }
+};
+
+export const setActiveHandler = async (req: Request, res: Response) => {
+  try {
+    const authUserId = (req as any).auth?.userId;
+    if (!authUserId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    activeStatuses.set(authUserId, Date.now());
+    cleanupActiveStatuses();
+
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error("Set active status error:", error);
+    return res.status(500).json({ error: "Failed to update active status" });
   }
 };
 

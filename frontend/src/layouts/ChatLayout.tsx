@@ -8,6 +8,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NotificationsModal from "../components/NotificationsModal";
+import { heartbeatUser } from "../api";
 
 function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -32,7 +33,7 @@ function NotificationBell() {
 }
 
 const ChatLayout = () => {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, getToken } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname || "";
@@ -40,6 +41,25 @@ const ChatLayout = () => {
   useEffect(() => {
     if (!isSignedIn) navigate("/");
   }, [isSignedIn, navigate]);
+
+  useEffect(() => {
+    const heartbeat = async () => {
+      if (!isSignedIn) return;
+      try {
+        const token = await getToken();
+        await heartbeatUser(token);
+      } catch (error) {
+        console.error("Failed to heartbeat active user", error);
+      }
+    };
+
+    void heartbeat();
+    const intervalId = window.setInterval(() => void heartbeat(), 15000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [getToken, isSignedIn]);
 
   const showChatPlaceholder = !(
     path.startsWith("/app/chat/") ||

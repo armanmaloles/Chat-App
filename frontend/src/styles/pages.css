@@ -1,0 +1,39 @@
+.page {
+  max-width: 1380px;
+}
+
+.chat-room__header {
+  margin-bottom: 2px;
+}
+
+.page--conversation-list {
+  display: grid;
+  grid-template-columns: 520px 1fr;
+  gap: 24px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.page--conversation-list--collapsed {
+  grid-template-columns: 88px auto;
+}
+
+.page--conversation-list--collapsed .conversation-list__main,
+.page--conversation-list--collapsed .conversation-list {
+  display: none;
+}
+
+.page--groups,
+.page--notifications,
+.page--settings,
+.page--not-found {
+  min-height: 0;
+}
+
+.page--settings .settings-section {
+  max-width: 640px;
+}
+
+.page--notifications .conversation-list__empty {
+  margin-top: 20px;
+}

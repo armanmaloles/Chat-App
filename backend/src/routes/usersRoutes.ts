@@ -6,6 +6,7 @@ import {
   updateUserHandler,
   upsertUserHandler,
   getUsersHandler,
+  setActiveHandler,
   deleteUserHandler,
 } from "../controllers/usersController";
 
@@ -15,6 +16,7 @@ router.use(requireAuth);
 
 router.post("/users", createUserHandler);
 router.post("/users/upsert", upsertUserHandler);
+router.post("/users/active", setActiveHandler);
 router.get("/users", getUsersHandler);
 router.get("/users/:id", getUserHandler);
 router.put("/users/:id", updateUserHandler);

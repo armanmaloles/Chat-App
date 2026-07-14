@@ -50,6 +50,7 @@ const Groups = () => {
   const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
   const [name, setName] = useState("");
   const [groupSearch, setGroupSearch] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [isCreating, setIsCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -214,6 +215,10 @@ const Groups = () => {
     }
   };
 
+  const filteredAvailableUsers = availableUsers.filter((u) =>
+    u.name?.toLowerCase().includes(memberSearch.toLowerCase()) ?? false,
+  );
+
   return (
     <div className="page page--groups">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 20, maxWidth: 840 }}>
@@ -272,6 +277,20 @@ const Groups = () => {
                 onChange={(e) => setName(e.target.value)}
                 style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #1f2937", background: "#0f172a", color: "#e2e8f0", marginBottom: 8 }}
               />
+              <input
+                placeholder="Search users to add"
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #1f2937",
+                  background: "#0f172a",
+                  color: "#e2e8f0",
+                  marginBottom: 8,
+                }}
+              />
               <div
                 style={{
                   maxHeight: availableUsers.length > 5 ? 220 : "auto",
@@ -281,12 +300,18 @@ const Groups = () => {
                   borderRadius: 8,
                 }}
               >
-                {availableUsers.map((u) => (
-                  <label key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px" }}>
-                    <input type="checkbox" checked={!!selected[u.id]} onChange={() => toggle(u.id)} />
-                    <span style={{ color: "#e2e8f0" }}>{u.name || "Unknown"}</span>
-                  </label>
-                ))}
+                {filteredAvailableUsers.length === 0 ? (
+                  <div style={{ padding: 12, color: "#94a3b8" }}>
+                    No users found.
+                  </div>
+                ) : (
+                  filteredAvailableUsers.map((u) => (
+                    <label key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px" }}>
+                      <input type="checkbox" checked={!!selected[u.id]} onChange={() => toggle(u.id)} />
+                      <span style={{ color: "#e2e8f0" }}>{u.name || "Unknown"}</span>
+                    </label>
+                  ))
+                )}
               </div>
               <div style={{ marginTop: 12, display: "flex", flexDirection: "row-reverse", gap: 8 }}>
                 <button className="button" onClick={handleCreate} disabled={isCreating}>

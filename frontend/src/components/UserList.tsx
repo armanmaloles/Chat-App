@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import {
@@ -22,6 +22,7 @@ type UserItem = {
   name: string;
   email?: string | null;
   imageUrl?: string | null;
+  isActive?: boolean;
 };
 
 type UserListProps = {
@@ -29,17 +30,26 @@ type UserListProps = {
   showActions?: boolean;
 };
 
+const REFRESH_INTERVAL_MS = 30000;
+
 const UserList = ({ conversationId, showActions = false }: UserListProps) => {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const loadingTimerRef = useRef<number | null>(null);
   const { getToken } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
     const loadUsers = async () => {
+      if (loadingTimerRef.current) {
+        window.clearTimeout(loadingTimerRef.current);
+      }
+
       setIsLoading(true);
+      const startTime = Date.now();
+
       try {
         const token = await getToken();
         if (conversationId) {
@@ -57,6 +67,7 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
               name: userData.name || userData.id,
               email: userData.email,
               imageUrl: userData.imageUrl,
+              isActive: Boolean(userData.isActive),
             }))
             .filter((userData) => userData.id !== user?.id);
           setUsers(allUsers);
@@ -64,11 +75,24 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
       } catch (error) {
         console.error("Failed to load users", error);
       } finally {
-        setIsLoading(false);
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(500 - elapsed, 0);
+        loadingTimerRef.current = window.setTimeout(() => {
+          setIsLoading(false);
+          loadingTimerRef.current = null;
+        }, remaining);
       }
     };
 
     void loadUsers();
+    const intervalId = window.setInterval(() => void loadUsers(), REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+      if (loadingTimerRef.current) {
+        window.clearTimeout(loadingTimerRef.current);
+      }
+    };
   }, [conversationId, getToken, user?.id]);
 
   const handleStartChat = async (userId: string) => {
@@ -130,7 +154,14 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
 
   return (
     <div className="user-list">
-      <h3 className="user-list__title">{title}</h3>
+      <div className="user-list__header">
+        <h3 className="user-list__title">{title}</h3>
+        {!conversationId && (
+          <span className="user-list__refresh-note">
+            Refreshes every {REFRESH_INTERVAL_MS / 1000} seconds
+          </span>
+        )}
+      </div>
       {!conversationId && (
         <input
           type="text"
@@ -141,7 +172,10 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
         />
       )}
       {isLoading ? (
-        <p className="user-list__empty">Loading users…</p>
+        <p className="user-list__empty">
+          Loading users…
+          <span className="user-list__spinner" />
+        </p>
       ) : filteredUsers.length === 0 ? (
         <p className="user-list__empty">
           {conversationId ? "No members yet." : searchQuery ? "No users found." : "No other users available to chat with."}
@@ -157,7 +191,7 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
               role={!conversationId && showActions ? "button" : undefined}
               tabIndex={!conversationId && showActions ? 0 : undefined}
             >
-              <div className="user-list__avatar">
+              <div className={`user-list__avatar${userItem.isActive ? " user-list__avatar--active" : ""}`}>
                 {userItem.imageUrl ? (
                   <img src={userItem.imageUrl} alt={userItem.name || "User avatar"} />
                 ) : (

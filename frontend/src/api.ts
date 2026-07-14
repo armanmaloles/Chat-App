@@ -39,6 +39,11 @@ export const getUser = async (id: string, token?: string | null) =>
 export const getUsers = async (token?: string | null) =>
   apiClient.get("/users", { headers: getAuthHeaders(token) });
 
+export const heartbeatUser = async (token?: string | null) =>
+  apiClient.post("/users/active", null, {
+    headers: getAuthHeaders(token),
+  });
+
 export const updateUser = async (
   id: string,
   payload: Partial<UserPayload>,
@@ -93,6 +98,25 @@ export const getConversationMessages = async (
   token?: string | null,
 ) =>
   apiClient.get(`/conversations/${conversationId}/messages`, {
+    headers: getAuthHeaders(token),
+  });
+
+export const setTypingStatus = async (
+  conversationId: string,
+  payload: { userId: string; isTyping: boolean },
+  token?: string | null,
+) =>
+  apiClient.post(
+    `/conversations/${conversationId}/typing`,
+    payload,
+    { headers: getAuthHeaders(token) },
+  );
+
+export const getTypingStatus = async (
+  conversationId: string,
+  token?: string | null,
+) =>
+  apiClient.get(`/conversations/${conversationId}/typing`, {
     headers: getAuthHeaders(token),
   });
 

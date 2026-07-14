@@ -69,7 +69,6 @@ const Settings = () => {
   return (
     <div className="page page--settings">
       <h1>Settings</h1>
-      <p>Configure your preferences here.</p>
 
       <section className="settings-section">
         <h2>Account</h2>
