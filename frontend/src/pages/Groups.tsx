@@ -52,9 +52,20 @@ const Groups = () => {
   const [groupSearch, setGroupSearch] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [isCreating, setIsCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [toast, setToast] = useState<{ message: string; visible: boolean }>({ message: "", visible: false });
+  const [convCollapsed, setConvCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("chatApp:conversationListCollapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [toast, setToast] = useState<{ message: string; visible: boolean }>({
+    message: "",
+    visible: false,
+  });
 
   useEffect(() => {
     const load = async () => {
@@ -75,7 +86,9 @@ const Groups = () => {
         setGroups(groupsOnly);
 
         const usersRes = await getUsers(token);
-        const users = (usersRes.data as AvailableUser[]).filter((u) => u.id !== user.id);
+        const users = (usersRes.data as AvailableUser[]).filter(
+          (u) => u.id !== user.id,
+        );
         setAvailableUsers(users);
       } catch (err) {
         console.error(err);
@@ -145,13 +158,19 @@ const Groups = () => {
 
     const intervalId = window.setInterval(() => void load(), 5000);
 
-    window.addEventListener("conversationUpdated", handleConversationUpdate as EventListener);
+    window.addEventListener(
+      "conversationUpdated",
+      handleConversationUpdate as EventListener,
+    );
     window.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("storage", handleStorage);
 
     return () => {
       window.clearInterval(intervalId);
-      window.removeEventListener("conversationUpdated", handleConversationUpdate as EventListener);
+      window.removeEventListener(
+        "conversationUpdated",
+        handleConversationUpdate as EventListener,
+      );
       window.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("storage", handleStorage);
     };
@@ -159,6 +178,10 @@ const Groups = () => {
 
   const toggle = (id: string) => {
     setSelected((s) => ({ ...s, [id]: !s[id] }));
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpanded((e) => ({ ...e, [id]: !e[id] }));
   };
 
   const closeForm = () => {
@@ -177,14 +200,17 @@ const Groups = () => {
     setIsCreating(true);
     try {
       const token = await getToken();
-      const convRes = await createConversation({ name: name || null, isGroup: true, createdBy: user.id }, token);
+      const convRes = await createConversation(
+        { name: name || null, isGroup: true, createdBy: user.id },
+        token,
+      );
       const convId = convRes.data.id;
       // add current user and selected members
       await addConversationMember(convId, user.id, token);
       for (const id of memberIds) {
         await addConversationMember(convId, id, token);
       }
-      
+
       const newGroup: ConversationItem = {
         conversation: {
           id: convId,
@@ -198,13 +224,13 @@ const Groups = () => {
           ],
         },
       };
-      
+
       setGroups((prev) => [newGroup, ...prev]);
-      
+
       // Show toast message
       setToast({ message: "Group created successfully!", visible: true });
       setTimeout(() => setToast({ message: "", visible: false }), 3000);
-      
+
       // Reset form
       closeForm();
     } catch (err) {
@@ -215,32 +241,127 @@ const Groups = () => {
     }
   };
 
-  const filteredAvailableUsers = availableUsers.filter((u) =>
-    u.name?.toLowerCase().includes(memberSearch.toLowerCase()) ?? false,
+  const filteredAvailableUsers = availableUsers.filter(
+    (u) => u.name?.toLowerCase().includes(memberSearch.toLowerCase()) ?? false,
   );
+
+  const filteredGroups = groups.filter((g) =>
+    g.conversation.name
+      ? g.conversation.name.toLowerCase().includes(groupSearch.toLowerCase())
+      : "group chat".includes(groupSearch.toLowerCase()),
+  );
+
+  const headerStyle = {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 6,
+    marginBottom: 20,
+    maxWidth: 840,
+  } as const;
+
+  const leftColumnStyle = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    alignItems: "flex-start",
+  } as const;
+
+  const rightColumnStyle = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: 8,
+  } as const;
 
   return (
     <div className="page page--groups">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 20, maxWidth: 840 }}>
-        <h1 style={{ margin: 0 }}>Groups</h1>
-        <button className="button" onClick={() => setShowForm(true)}>
-          Create group
+      <div style={headerStyle}>
+        <div style={leftColumnStyle}>
+          <button
+          aria-label="Toggle conversations"
+          title="Toggle conversations"
+          onClick={() => {
+            const next = !convCollapsed;
+            setConvCollapsed(next);
+            window.dispatchEvent(new Event("toggleConversationList"));
+          }}
+          style={{
+            marginTop: 10,
+            marginLeft: 10,
+            width: 40,
+            height: 40,
+            borderRadius: 8,
+            display: "grid",
+            placeItems: "center",
+            background: "#0b1220",
+            border: "1px solid rgba(255,255,255,0.04)",
+            color: "#cbd5e1",
+            cursor: "pointer",
+          }}
+        >
+          {convCollapsed ? ">" : "<"}
         </button>
+          <h1 style={{ margin: "0px 10px" }}>Groups</h1>
+        </div>
+
+        <div style={rightColumnStyle}>
+          <div style={{ height: 40 }} />
+          <button
+            aria-label="Create group"
+            className="button create-group"
+            onClick={() => setShowForm(true)}
+          >
+            Create group
+          </button>
+        </div>
       </div>
 
       {toast.visible && (
-        <div style={{ position: "fixed", top: 20, right: 20, padding: 12, borderRadius: 8, background: "#10b981", color: "white", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)", zIndex: 1000 }}>
+        <div
+          style={{
+            position: "fixed",
+            top: 20,
+            right: 20,
+            padding: 12,
+            borderRadius: 8,
+            background: "#10b981",
+            color: "white",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+            zIndex: 1000,
+          }}
+        >
           {toast.message}
         </div>
       )}
 
-      <div style={{ marginBottom: 20, maxWidth: 840 }}>
+      <div style={{ marginBottom: 6, maxWidth: 840 }}>
         <input
           placeholder="Search groups by name"
           value={groupSearch}
           onChange={(e) => setGroupSearch(e.target.value)}
-          style={{ width: "100%", padding: "10px 2px", marginTop: "-10px", borderRadius: 8, border: "1px solid #1f2937", background: "#0f172a", color: "#e2e8f0" }}
+          style={{
+            width: "98%",
+            padding: "10px 2px",
+            marginTop: 0,
+            marginLeft: "10px",
+            borderRadius: 8,
+            border: "1px solid #1f2937",
+            background: "#0f172a",
+            color: "#e2e8f0",
+          }}
         />
+        <div
+          className="page--groups__label"
+          style={{
+            color: "#bbc5d1",
+            fontSize: "0.95rem",
+            margin: "10px 0 8px 10px",
+            fontWeight: 600,
+          }}
+        >
+          Your groups
+        </div>
 
         {showForm && (
           <div
@@ -275,7 +396,15 @@ const Groups = () => {
                 placeholder="Group name (optional)"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: "1px solid #1f2937", background: "#0f172a", color: "#e2e8f0", marginBottom: 8 }}
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: "1px solid #1f2937",
+                  background: "#0f172a",
+                  color: "#e2e8f0",
+                  marginBottom: 8,
+                }}
               />
               <input
                 placeholder="Search users to add"
@@ -306,18 +435,47 @@ const Groups = () => {
                   </div>
                 ) : (
                   filteredAvailableUsers.map((u) => (
-                    <label key={u.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px" }}>
-                      <input type="checkbox" checked={!!selected[u.id]} onChange={() => toggle(u.id)} />
-                      <span style={{ color: "#e2e8f0" }}>{u.name || "Unknown"}</span>
+                    <label
+                      key={u.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "8px 12px",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={!!selected[u.id]}
+                        onChange={() => toggle(u.id)}
+                      />
+                      <span style={{ color: "#e2e8f0" }}>
+                        {u.name || "Unknown"}
+                      </span>
                     </label>
                   ))
                 )}
               </div>
-              <div style={{ marginTop: 12, display: "flex", flexDirection: "row-reverse", gap: 8 }}>
-                <button className="button" onClick={handleCreate} disabled={isCreating}>
+              <div
+                style={{
+                  marginTop: 12,
+                  display: "flex",
+                  flexDirection: "row-reverse",
+                  gap: 8,
+                }}
+              >
+                <button
+                  className="button"
+                  onClick={handleCreate}
+                  disabled={isCreating}
+                >
                   {isCreating ? "Creating…" : "Create group"}
                 </button>
-                <button className="button" onClick={closeForm} style={{ background: "#374151", borderColor: "#4b5563" }}>
+                <button
+                  className="button"
+                  onClick={closeForm}
+                  style={{ background: "#374151", borderColor: "#4b5563" }}
+                >
                   Cancel
                 </button>
               </div>
@@ -326,59 +484,149 @@ const Groups = () => {
         )}
       </div>
 
-      <div style={{ maxWidth: 840 }} className="conversation-list conversation-list--scroll">
-        {groups.length === 0 ? (
-          <div className="conversation-list__empty">No groups yet.</div>
-        ) : (
-          groups
-            .filter((g) =>
-              g.conversation.name
-                ? g.conversation.name.toLowerCase().includes(groupSearch.toLowerCase())
-                : "group chat".includes(groupSearch.toLowerCase()),
-            )
-            .map((g) => {
+      <div
+        className="conversation-list__scroll-wrapper page--groups__group-list-wrapper"
+        style={{ maxWidth: 840 }}
+      >
+        <div className="conversation-list conversation-list--scroll" style={{ marginTop: "5px" }}>
+          {filteredGroups.length === 0 ? (
+            <div className="conversation-list__empty">No groups yet.</div>
+          ) : (
+            filteredGroups.map((g) => {
               const currentUserId = user?.id;
               const title = g.conversation.name || "Group chat";
               const lastMessage = g.conversation.messages?.[0];
-              const senderName = lastMessage?.sender?.id === currentUserId ? "You" : lastMessage?.sender?.name || "Unknown";
-              const subtitle = lastMessage ? `${senderName}: ${lastMessage.content}` : `${(g.conversation.members ?? []).length} members`;
+              const senderName =
+                lastMessage?.sender?.id === currentUserId
+                  ? "You"
+                  : lastMessage?.sender?.name || "Unknown";
+              const subtitle = lastMessage
+                ? `${senderName}: ${lastMessage.content}`
+                : `${(g.conversation.members ?? []).length} members`;
               const time = formatRelativeTime(lastMessage?.createdAt);
-              const isActive = location.pathname === `/app/groups/${g.conversation.id}`;
-              const lastReadAt = localStorage.getItem(`chatApp:conversation:read:${g.conversation.id}`)
-                ? new Date(localStorage.getItem(`chatApp:conversation:read:${g.conversation.id}`) as string)
+              const isActive =
+                location.pathname === `/app/groups/${g.conversation.id}`;
+              const lastReadAt = localStorage.getItem(
+                `chatApp:conversation:read:${g.conversation.id}`,
+              )
+                ? new Date(
+                    localStorage.getItem(
+                      `chatApp:conversation:read:${g.conversation.id}`,
+                    ) as string,
+                  )
                 : null;
               const isUnread = Boolean(
                 lastMessage &&
-                  !isActive &&
-                  (!lastReadAt || (lastMessage.createdAt && new Date(lastMessage.createdAt) > lastReadAt)),
+                !isActive &&
+                (!lastReadAt ||
+                  (lastMessage.createdAt &&
+                    new Date(lastMessage.createdAt) > lastReadAt)),
               );
 
+              const isExpanded = !!expanded[g.conversation.id];
+
               return (
-                <Link
-                  key={g.conversation.id}
-                  to={`/app/groups/${g.conversation.id}`}
-                  className={`conversation-list__item${isActive ? " conversation-list__item--active" : ""}`}
-                  style={{ marginBottom: 2 }}
-                >
-                  <div className="conversation-list__avatar">
-                    <span>{title.slice(0, 1).toUpperCase()}</span>
-                  </div>
-                  <div className="conversation-list__details">
-                    <div className="conversation-list__name">{title}</div>
-                    <div className={`conversation-list__subtitle${isUnread ? " conversation-list__subtitle--unread" : ""}`}>{subtitle}</div>
-                  </div>
-                  <div className="conversation-list__meta">
-                    {time && <span className="conversation-list__time">{time}</span>}
-                    {lastMessage && isUnread ? <span className="conversation-list__badge" /> : null}
-                  </div>
-                </Link>
+                <div key={g.conversation.id}>
+                  <Link
+                    to={`/app/groups/${g.conversation.id}`}
+                    className={`conversation-list__item${isActive ? " conversation-list__item--active" : ""}`}
+                    style={{ position: "relative" }}
+                  >
+                    <div className="conversation-list__avatar">
+                      <span>{title.slice(0, 1).toUpperCase()}</span>
+                    </div>
+                    <div className="conversation-list__details">
+                      <div className="conversation-list__name">{title}</div>
+                      <div
+                        className={`conversation-list__subtitle${isUnread ? " conversation-list__subtitle--unread" : ""}`}
+                      >
+                        {subtitle}
+                      </div>
+                    </div>
+                    <div
+                      className="conversation-list__meta"
+                      style={{ display: "flex", alignItems: "flex-end", justifyContent: "flex-end", gap: 1 }}
+                    >
+                      {time && (
+                        <span className="conversation-list__time">{time}</span>
+                      )}
+                      {lastMessage && isUnread ? (
+                        <span className="conversation-list__badge" />
+                      ) : null}
+                      <button
+                        aria-expanded={isExpanded}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleExpand(g.conversation.id);
+                        }}
+                        title={isExpanded ? "Collapse" : "Expand"}
+                        className="conversation-list__expand-button"
+                      >
+                        {isExpanded ? "▾" : "▸"}
+                      </button>
+                    </div>
+                  </Link>
+
+                  {isExpanded && (
+                    <div
+                      style={{
+                        background: "#0b1220",
+                        border: "1px solid rgba(255,255,255,0.03)",
+                        borderRadius: 12,
+                        padding: 12,
+                        marginTop: 6,
+                        maxWidth: 840,
+                      }}
+                    >
+                      <div
+                        style={{ display: "flex", gap: 12, flexWrap: "wrap" }}
+                      >
+                        {(g.conversation.members ?? []).map((m, idx) => (
+                          <div
+                            key={m.user?.id || idx}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              padding: "6px 8px",
+                              borderRadius: 8,
+                              background: "rgba(255,255,255,0.02)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: 16,
+                                background: "#1f2937",
+                                display: "grid",
+                                placeItems: "center",
+                                color: "#fff",
+                                fontWeight: 700,
+                              }}
+                            >
+                              {m.user?.name?.slice(0, 1).toUpperCase() || "?"}
+                            </div>
+                            <div style={{ color: "#e2e8f0", fontWeight: 600 }}>
+                              {m.user?.name || "Unknown"}
+                            </div>
+                          </div>
+                        ))}
+                        {(g.conversation.members ?? []).length === 0 && (
+                          <div style={{ color: "#94a3b8" }}>No members</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
 export default Groups;
-

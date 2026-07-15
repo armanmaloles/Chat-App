@@ -8,14 +8,14 @@
 
 .page--conversation-list {
   display: grid;
-  grid-template-columns: 520px 1fr;
+  grid-template-columns: minmax(320px, 520px) 1fr;
   gap: 24px;
   flex: 1 1 auto;
   min-height: 0;
 }
 
 .page--conversation-list--collapsed {
-  grid-template-columns: 88px auto;
+  grid-template-columns: 88px minmax(0, 1fr);
 }
 
 .page--conversation-list--collapsed .conversation-list__main,

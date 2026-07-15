@@ -33,7 +33,6 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
   const [isSending, setIsSending] = useState(false);
   const [isConversationLoaded, setIsConversationLoaded] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Array<{ userId: string; userName: string }>>([]);
-  const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingDebounceRef = useRef<number | null>(null);
   const { getToken } = useAuth();
@@ -154,7 +153,6 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
         { userId: user.id, isTyping: typing },
         token,
       );
-      setIsTyping(typing);
     } catch (error) {
       console.error("Failed to update typing status", error);
     }

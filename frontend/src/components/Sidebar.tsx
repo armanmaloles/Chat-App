@@ -1,5 +1,4 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
 
 const navItems = [
   { to: "/app/conversations", label: "Chats", icon: "💬" },
@@ -7,24 +6,14 @@ const navItems = [
   { to: "/app/settings", label: "Settings", icon: "⚙️" },
 ];
 
-const Sidebar = () => {
+const Sidebar = ({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) => {
   const location = useLocation();
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try {
-      const raw = localStorage.getItem("chatApp:sidebarCollapsed");
-      return raw === "1";
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("chatApp:sidebarCollapsed", collapsed ? "1" : "0");
-    } catch {
-      /* noop */
-    }
-  }, [collapsed]);
 
   return (
     <div className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}>
@@ -32,11 +21,12 @@ const Sidebar = () => {
         <button
           type="button"
           className="sidebar__toggle-btn"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          onClick={() => setCollapsed((c) => !c)}
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? "Expand" : "Collapse"}
+          title={collapsed ? "Expand" : "Collapse"}
         >
-          <span className="sidebar__toggle-icon">{collapsed ? ">" : "<"}</span>
+          {collapsed ? "›" : "‹"}
         </button>
       </div>
 

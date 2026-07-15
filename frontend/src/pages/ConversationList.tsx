@@ -16,6 +16,8 @@ type ConversationItem = {
         name?: string | null;
         email?: string | null;
         imageUrl?: string | null;
+        isOnline?: boolean;
+        isActive?: boolean;
       };
     }>;
     messages?: Array<{
@@ -40,29 +42,42 @@ const formatRelativeTime = (dateString?: string) => {
   return `${days}d`;
 };
 
-const ConversationList = () => {
+const ConversationList = ({
+  collapsed: collapsedProp,
+  onToggle,
+}: {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}) => {
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [readTimestamps, setReadTimestamps] = useState<Record<string, string>>(
     {},
   );
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
+  const [localCollapsed, setLocalCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem("chatApp:conversationListCollapsed") === "1";
     } catch {
       return false;
     }
   });
+  const collapsed = collapsedProp ?? localCollapsed;
+  const toggleCollapsed = onToggle ?? (() => setLocalCollapsed((c) => !c));
   const { getToken } = useAuth();
   const { user } = useUser();
   const location = useLocation();
 
   useEffect(() => {
+    if (collapsedProp !== undefined) return;
+
     try {
-      localStorage.setItem("chatApp:conversationListCollapsed", collapsed ? "1" : "0");
+      localStorage.setItem(
+        "chatApp:conversationListCollapsed",
+        localCollapsed ? "1" : "0",
+      );
     } catch {
       /* noop */
     }
-  }, [collapsed]);
+  }, [localCollapsed, collapsedProp]);
 
   useEffect(() => {
     const loadConversations = async () => {
@@ -200,11 +215,11 @@ const ConversationList = () => {
       <div className="conversation-list__sidebar">
         <button
           className="conversation-list__toggle"
-          onClick={() => setCollapsed((c) => !c)}
+          onClick={toggleCollapsed}
           aria-expanded={!collapsed}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
+          aria-label={collapsed ? "Expand" : "Collapse"}
+          title={collapsed ? "Expand" : "Collapse"}
+        > 
           {collapsed ? "›" : "‹"}
         </button>
         {!collapsed && (
@@ -329,6 +344,7 @@ const ConversationList = () => {
                 const lastReadAt = readTimestamps[entry.conversation.id]
                   ? new Date(readTimestamps[entry.conversation.id])
                   : null;
+                const isOnline = Boolean(otherUser?.isOnline || otherUser?.isActive);
                 const isActive =
                   location.pathname === `/app/chat/${entry.conversation.id}`;
                 const isUnread = Boolean(
@@ -356,6 +372,9 @@ const ConversationList = () => {
                         <span>{avatarLabel}</span>
                       )}
                     </div>
+                    {isOnline && (
+                      <span className="conversation-list__collapsed-online-indicator" />
+                    )}
                     {isUnread && (
                       <span className="conversation-list__collapsed-badge" />
                     )}

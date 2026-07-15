@@ -4,6 +4,7 @@ import {
   getConversationById,
   getUserConversations,
 } from "../db/queries";
+import { isUserActive } from "./usersController";
 
 export const createConversationHandler = async (req: Request, res: Response) => {
   try {
@@ -37,7 +38,23 @@ export const getUserConversationsHandler = async (req: Request, res: Response) =
   try {
     const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
     const conversations = await getUserConversations(userId);
-    return res.status(200).json(conversations);
+    const conversationsWithOnline = conversations.map((conversation) => ({
+      ...conversation,
+      conversation: {
+        ...conversation.conversation,
+        members: conversation.conversation.members?.map((member) => ({
+          ...member,
+          user: member.user
+            ? {
+                ...member.user,
+                isOnline: isUserActive(member.user.id),
+                isActive: isUserActive(member.user.id),
+              }
+            : member.user,
+        })),
+      },
+    }));
+    return res.status(200).json(conversationsWithOnline);
   } catch (error) {
     console.error("Get user conversations error:", error);
     return res.status(500).json({ error: "Failed to fetch conversations" });

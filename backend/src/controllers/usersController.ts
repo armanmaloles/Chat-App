@@ -4,6 +4,8 @@ import { createUser, getAllUsers, getUserById, updateUser, upsertUser, deleteUse
 const activeStatuses = new Map<string, number>();
 const ACTIVE_TIMEOUT_MS = 30000;
 
+export const isUserActive = (userId: string) => activeStatuses.has(userId);
+
 const cleanupActiveStatuses = () => {
   const now = Date.now();
   for (const [userId, lastSeen] of activeStatuses.entries()) {

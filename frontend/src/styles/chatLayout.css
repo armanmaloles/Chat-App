@@ -45,16 +45,30 @@
 
 .app-content {
   display: grid;
-  grid-template-columns: 260px 520px 1fr;
+  grid-template-columns: 260px 520px minmax(0, 1fr);
+  transition: grid-template-columns 0.25s ease;
   gap: 28px 0;
   padding: 2px 40px;
-  flex: 1 1 auto;
+  flex: 1;
   min-height: calc(100vh - 64px);
+}
+
+.app-content--sidebar-collapsed {
+  grid-template-columns: 72px 520px minmax(0, 1fr);
+}
+
+.app-content--conversation-collapsed {
+  grid-template-columns: 260px 88px minmax(0, 1fr);
+}
+
+.app-content--sidebar-collapsed.app-content--conversation-collapsed {
+  grid-template-columns: 72px 88px minmax(0, 1fr);
 }
 
 .app-sidebar {
   background: transparent;
   border-right: 1px solid rgba(255, 255, 255, 0.03);
+  min-width: 0;
 }
 
 .app-conversations {
@@ -62,15 +76,19 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   align-items: stretch;
 }
 
 .app-chat {
-  background: transparent;
-  padding-left: 12px;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  padding-left: 12px;
+  overflow: hidden;
 }
 
 .app-chat__empty {

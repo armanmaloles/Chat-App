@@ -37,6 +37,52 @@ const ChatLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname || "";
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("chatApp:sidebarCollapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [conversationCollapsed, setConversationCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("chatApp:conversationListCollapsed") === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "chatApp:sidebarCollapsed",
+        sidebarCollapsed ? "1" : "0",
+      );
+    } catch {
+      /* noop */
+    }
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "chatApp:conversationListCollapsed",
+        conversationCollapsed ? "1" : "0",
+      );
+    } catch {
+      /* noop */
+    }
+  }, [conversationCollapsed]);
+
+  const toggleSidebar = () => setSidebarCollapsed((value) => !value);
+  const toggleConversationCollapsed = () =>
+    setConversationCollapsed((value) => !value);
+
+  useEffect(() => {
+    const handler = () => toggleConversationCollapsed();
+    window.addEventListener("toggleConversationList", handler as EventListener);
+    return () => window.removeEventListener("toggleConversationList", handler as EventListener);
+  }, []);
 
   useEffect(() => {
     if (!isSignedIn) navigate("/");
@@ -74,7 +120,12 @@ const ChatLayout = () => {
   } else if (path.startsWith("/app/settings")) {
     content = <Settings />;
   } else {
-    content = <ConversationList />;
+    content = (
+      <ConversationList
+        collapsed={conversationCollapsed}
+        onToggle={toggleConversationCollapsed}
+      />
+    );
   }
 
   return (
@@ -93,9 +144,11 @@ const ChatLayout = () => {
         </div>
       </header>
 
-      <div className="app-content">
+      <div
+        className={`app-content${sidebarCollapsed ? " app-content--sidebar-collapsed" : ""}${conversationCollapsed ? " app-content--conversation-collapsed" : ""}`}
+      >
         <aside className="app-sidebar">
-          <Sidebar />
+          <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
         </aside>
 
         <section className="app-conversations">{content}</section>
