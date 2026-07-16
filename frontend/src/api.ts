@@ -20,9 +20,18 @@ type ConversationPayload = {
   createdBy: string;
 };
 
+type MessageAttachmentPayload = {
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  dataUrl: string;
+};
+
 type MessagePayload = {
   senderId: string;
   content: string;
+  attachment?: MessageAttachmentPayload;
+  attachments?: MessageAttachmentPayload[];
 };
 
 export const getHealth = async (token?: string | null) =>

@@ -34,7 +34,162 @@
 
 .message-input {
   display: flex;
+  flex-direction: column;
   gap: 12px;
+  width: 100%;
+}
+
+.message-input__controls {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  width: 100%;
+}
+
+/* Allow the bubble to shrink inside a flex row so its inner scroll can work */
+.message-input__bubble {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.message-input__bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  padding: 16px;
+  border-radius: 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+}
+
+.message-input__attachments {
+  display: flex;
+  gap: 8px;
+  /* Keep attachments on a single line and allow horizontal scrolling when overflowing */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 6px;
+}
+
+/* Constrain attachments and ensure scrollbar is styled/visible */
+.message-input__attachments {
+  max-width: 100%;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+
+.message-input__attachments::-webkit-scrollbar {
+  height: 8px;
+}
+.message-input__attachments::-webkit-scrollbar-track {
+  background: transparent;
+}
+.message-input__attachments::-webkit-scrollbar-thumb {
+  background: rgba(75,85,99,0.6);
+  border-radius: 9999px;
+}
+
+.message-input__attach {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  min-width: 72px;
+  height: 48px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #1f2937, #111827);
+  color: #e2e8f0;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.03);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.message-input__attach,
+.message-input__button {
+  align-self: flex-end;
+}
+
+.message-input__button {
+  width: 96px;
+  min-width: 96px;
+  height: 48px;
+  border-radius: 18px;
+}
+
+.message-input__bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  padding: 16px;
+  border-radius: 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+}
+
+.message-input__field {
+  width: 100%;
+  min-height: 40px;
+  line-height: 1.4;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  color: #e2e8f0;
+}
+
+.message-input__attachments {
+  display: flex;
+  gap: 8px;
+  /* Keep attachments on a single line and allow horizontal scrolling when overflowing */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 6px;
+}
+
+.message-input__attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.08);
+  /* Prevent attachment chips from shrinking in horizontal flow */
+  flex: 0 0 auto;
+}
+
+.message-input__attach:hover {
+  background: linear-gradient(135deg, #22272f, #0f1724);
+}
+
+.message-input__attach .message-input__file {
+  display: none;
+}
+
+.message-input__attach,
+.message-input__button {
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.message-input__attach:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(2,6,23,0.45);
+}
+
+.message-input__attach:focus,
+.message-input__attach:focus-visible {
+  outline: 3px solid rgba(37,99,235,0.18);
+  outline-offset: 2px;
 }
 
 .message-input__field {
@@ -42,9 +197,32 @@
   min-width: 0;
   border: 1px solid #334155;
   border-radius: 9999px;
-  padding: 4px 16px;
+  padding: 12px 16px;
   background: #0f172a;
   color: #e2e8f0;
+  width: 100%;
+}
+
+.message-input__attachments {
+  display: flex;
+  gap: 8px;
+  /* Keep attachments on a single line and allow horizontal scrolling when overflowing */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  padding-bottom: 6px;
+}
+
+.message-input__attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  /* Prevent attachment chips from shrinking in horizontal flow */
+  flex: 0 0 auto;
 }
 
 .message-input__button {
@@ -58,6 +236,14 @@
 
 .message-input__button:hover {
   background: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(37,99,235,0.25);
+}
+
+.message-input__button:focus,
+.message-input__button:focus-visible {
+  outline: 3px solid rgba(37,99,235,0.18);
+  outline-offset: 2px;
 }
 
 .notifications-modal {

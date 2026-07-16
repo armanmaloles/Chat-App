@@ -42,6 +42,27 @@ const formatRelativeTime = (dateString?: string) => {
   return `${days}d`;
 };
 
+const getAttachmentPreview = (content: string, senderName: string) => {
+  if (!content) return `${senderName}:`;
+
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === "object" && (Array.isArray(parsed.attachments) ? parsed.attachments.length > 0 : parsed.attachment)) {
+      if (senderName === "You") {
+        return `You sent an attachment`;
+      }
+      return `${senderName} sent an attachment`;
+    }
+    if (typeof parsed.text === "string" && parsed.text.trim()) {
+      return `${senderName}: ${parsed.text}`;
+    }
+  } catch {
+    // Fall back to raw content
+  }
+
+  return `${senderName}: ${content}`;
+};
+
 const ConversationList = ({
   collapsed: collapsedProp,
   onToggle,
@@ -254,7 +275,7 @@ const ConversationList = ({
                           ? "You"
                           : lastMessage?.sender?.name || "Unknown";
                       const subtitle = lastMessage
-                        ? `${senderName}: ${lastMessage.content}`
+                        ? getAttachmentPreview(lastMessage.content, senderName)
                         : "Tap to open chat";
                       const time = formatRelativeTime(lastMessage?.createdAt);
                       const isActive =

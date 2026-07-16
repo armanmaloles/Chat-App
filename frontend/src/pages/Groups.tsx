@@ -500,8 +500,29 @@ const Groups = () => {
                 lastMessage?.sender?.id === currentUserId
                   ? "You"
                   : lastMessage?.sender?.name || "Unknown";
+              const getAttachmentPreview = (content: string, senderName: string) => {
+                if (!content) return `${senderName}:`;
+
+                try {
+                  const parsed = JSON.parse(content);
+                  if (parsed && typeof parsed === "object" && (Array.isArray(parsed.attachments) ? parsed.attachments.length > 0 : parsed.attachment)) {
+                    if (senderName === "You") {
+                      return `You sent an attachment`;
+                    }
+                    return `${senderName} sent an attachment`;
+                  }
+                  if (typeof parsed.text === "string" && parsed.text.trim()) {
+                    return `${senderName}: ${parsed.text}`;
+                  }
+                } catch {
+                  // Fall back to raw content
+                }
+
+                return `${senderName}: ${content}`;
+              };
+
               const subtitle = lastMessage
-                ? `${senderName}: ${lastMessage.content}`
+                ? getAttachmentPreview(lastMessage.content, senderName)
                 : `${(g.conversation.members ?? []).length} members`;
               const time = formatRelativeTime(lastMessage?.createdAt);
               const isActive =

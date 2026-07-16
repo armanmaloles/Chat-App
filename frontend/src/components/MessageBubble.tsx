@@ -1,11 +1,21 @@
+type MessageAttachment = {
+  kind: "image" | "video" | "document";
+  mimeType: string;
+  fileName: string;
+  fileSize: number;
+  dataUrl: string;
+  extension: string;
+};
+
 type MessageBubbleProps = {
   author: string;
   content: string;
+  attachments?: MessageAttachment[];
   createdAt?: string;
   isOwn?: boolean;
 };
 
-const MessageBubble = ({ author, content, createdAt, isOwn = false }: MessageBubbleProps) => {
+const MessageBubble = ({ author, content, attachments, createdAt, isOwn = false }: MessageBubbleProps) => {
   const formatBubbleTime = (dateString?: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -34,7 +44,41 @@ const MessageBubble = ({ author, content, createdAt, isOwn = false }: MessageBub
         <span>{author}</span>
         {createdAt && <span className="message-bubble__time">{formatBubbleTime(createdAt)}</span>}
       </div>
-      <div className="message-bubble__content">{content}</div>
+      <div className="message-bubble__content">
+        {content ? <div>{content}</div> : null}
+        {attachments && attachments.length > 0 ? (
+          <div style={{ marginTop: content ? "0.5rem" : 0, display: "grid", gap: "0.75rem" }}>
+            {attachments.map((attachment, index) => (
+              <div key={`${attachment.fileName}-${index}`}>
+                {attachment.kind === "image" ? (
+                  <img src={attachment.dataUrl} alt={attachment.fileName} style={{ maxWidth: "100%", borderRadius: "0.75rem", display: "block" }} />
+                ) : attachment.kind === "video" ? (
+                  <video src={attachment.dataUrl} controls style={{ maxWidth: "100%", borderRadius: "0.75rem", display: "block" }} />
+                ) : (
+                  <a
+                    href={attachment.dataUrl}
+                    download={attachment.fileName}
+                    style={{
+                      display: "inline-flex",
+                      flexDirection: "column",
+                      gap: "0.25rem",
+                      padding: "0.75rem",
+                      borderRadius: "0.75rem",
+                      background: "rgba(255,255,255,0.04)",
+                      color: "inherit",
+                      textDecoration: "none",
+                      maxWidth: "100%",
+                    }}
+                  >
+                    <strong>{attachment.fileName}</strong>
+                    <span style={{ fontSize: "0.85rem", color: "#94a3b8" }}>{attachment.extension.toUpperCase()} • {(attachment.fileSize / 1024).toFixed(1)} KB</span>
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 };

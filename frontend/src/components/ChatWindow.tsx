@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import {
   getConversationMessages,
@@ -8,6 +8,15 @@ import {
 } from "../api";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
+
+type MessageAttachment = {
+  kind: "image" | "video" | "document";
+  mimeType: string;
+  fileName: string;
+  fileSize: number;
+  dataUrl: string;
+  extension: string;
+};
 
 type BackendMessage = {
   id: string;
@@ -24,12 +33,64 @@ type ChatMessage = {
   author: string;
   content: string;
   senderId: string;
+  attachments?: MessageAttachment[];
   createdAt?: string;
+};
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+const parseMessagePayload = (content: string) => {
+  if (!content) {
+    return { text: "", attachments: undefined as MessageAttachment[] | undefined };
+  }
+
+  try {
+    const parsed = JSON.parse(content);
+    if (parsed && typeof parsed === "object") {
+      const rawAttachments = Array.isArray(parsed.attachments)
+        ? parsed.attachments
+        : parsed.attachment
+        ? [parsed.attachment]
+        : undefined;
+
+      const attachments = rawAttachments?.map(
+        (attachment: MessageAttachment & { extension?: string }) => {
+          const extensionFromName = attachment.fileName?.split(".").pop()?.toLowerCase() ?? "";
+          return {
+            ...attachment,
+            kind: attachment.kind ?? getAttachmentKind(attachment.mimeType),
+            extension: attachment.extension ?? extensionFromName,
+            fileSize: attachment.fileSize ?? 0,
+            dataUrl: attachment.dataUrl ?? "",
+            mimeType: attachment.mimeType ?? "",
+            fileName: attachment.fileName ?? "file",
+          };
+        },
+      );
+
+      return {
+        text: typeof parsed.text === "string" ? parsed.text : "",
+        attachments,
+      };
+    }
+  } catch {
+    // Fall back to plain text content.
+  }
+
+  return { text: content, attachments: undefined as MessageAttachment[] | undefined };
+};
+
+const getAttachmentKind = (mimeType: string) => {
+  if (!mimeType) return "document" as const;
+  if (mimeType.startsWith("image/")) return "image" as const;
+  if (mimeType.startsWith("video/")) return "video" as const;
+  return "document" as const;
 };
 
 const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
+  const [pendingAttachmentsByConversation, setPendingAttachmentsByConversation] = useState<Record<string, MessageAttachment[]>>({});
   const [isSending, setIsSending] = useState(false);
   const [isConversationLoaded, setIsConversationLoaded] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Array<{ userId: string; userName: string }>>([]);
@@ -49,15 +110,15 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
 
   const getDraftKey = (id?: string) => `chatApp:draft:${id}`;
 
-  const saveDraft = (id?: string, text: string = "") => {
+  const saveDraft = useCallback((id?: string, text: string = "") => {
     if (!id) return;
     localStorage.setItem(getDraftKey(id), text);
-  };
+  }, []);
 
-  const loadDraft = (id?: string) => {
+  const loadDraft = useCallback((id?: string) => {
     if (!id) return "";
     return localStorage.getItem(getDraftKey(id)) || "";
-  };
+  }, []);
 
   useEffect(() => {
     // Save previous conversation's draft
@@ -65,18 +126,32 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
       saveDraft(prevConversationIdRef.current, draft);
     }
 
-    // Load current conversation's draft
+    // Load current conversation's draft asynchronously to avoid synchronous state update in effect.
     const newDraft = loadDraft(conversationId);
-    setDraft(newDraft);
+    const timeoutId = window.setTimeout(() => setDraft(newDraft), 0);
 
     // Update ref
     prevConversationIdRef.current = conversationId;
-  }, [conversationId]);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [conversationId, draft, loadDraft, saveDraft]);
+
+  const currentPendingAttachments = conversationId ? pendingAttachmentsByConversation[conversationId] || [] : [];
+
+  const setCurrentPendingAttachments = (attachments: MessageAttachment[]) => {
+    if (!conversationId) return;
+    setPendingAttachmentsByConversation((current) => ({
+      ...current,
+      [conversationId]: attachments,
+    }));
+  };
 
   useEffect(() => {
     // Save draft to localStorage whenever it changes
     saveDraft(conversationId, draft);
-  }, [draft, conversationId]);
+  }, [draft, conversationId, saveDraft]);
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -93,16 +168,20 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
         ]);
 
         setMessages(
-          messagesResponse.data.map((message: BackendMessage) => ({
-            id: message.id,
-            author:
-              message.sender?.id === user?.id
-                ? "You"
-                : message.sender?.name || "Unknown",
-            content: message.content,
-            senderId: message.sender?.id || "",
-            createdAt: message.createdAt,
-          })),
+          messagesResponse.data.map((message: BackendMessage) => {
+            const parsedContent = parseMessagePayload(message.content);
+            return {
+              id: message.id,
+              author:
+                message.sender?.id === user?.id
+                  ? "You"
+                  : message.sender?.name || "Unknown",
+              content: parsedContent.text,
+              senderId: message.sender?.id || "",
+              attachments: parsedContent.attachments,
+              createdAt: message.createdAt,
+            };
+          }),
         );
 
         setTypingUsers(
@@ -175,8 +254,86 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
     }, 1500);
   };
 
+  const readFileAsAttachment = (file: File): Promise<MessageAttachment> =>
+    new Promise((resolve, reject) => {
+      const allowedMimeTypes = [
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/gif",
+        "image/webp",
+        "video/mp4",
+        "video/webm",
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      ];
+
+      // accept files by mime type or by extension fallback
+      const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+      const allowedExtensions = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"];
+      const isAllowed = allowedMimeTypes.includes(file.type) || allowedExtensions.includes(extension);
+      if (!isAllowed) {
+        reject(new Error("Unsupported file type"));
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        reject(new Error("File too large"));
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        resolve({
+          kind: getAttachmentKind(file.type),
+          mimeType: file.type || "application/octet-stream",
+          fileName: file.name,
+          fileSize: file.size,
+          dataUrl,
+          extension,
+        });
+      };
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+
+  const handleFileSelect = (files: File[] | null) => {
+    if (!conversationId) return;
+    if (!files || files.length === 0) {
+      setCurrentPendingAttachments([]);
+      return;
+    }
+
+    files.forEach((file) => {
+      void readFileAsAttachment(file)
+        .then((attachment) => {
+          setPendingAttachmentsByConversation((current) => {
+            const currentAttachments = current[conversationId] || [];
+            return {
+              ...current,
+              [conversationId]: [...currentAttachments, attachment],
+            };
+          });
+        })
+        .catch((error) => {
+          console.error("Failed to prepare attachment", error);
+          window.alert("Please choose a supported file smaller than 10MB.");
+        });
+    });
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setCurrentPendingAttachments(currentPendingAttachments.filter((_, idx) => idx !== index));
+  };
+
   const handleSend = async () => {
-    if (!draft.trim() || !conversationId || !user?.id) return;
+    if ((!draft.trim() && currentPendingAttachments.length === 0) || !conversationId || !user?.id) return;
 
     setIsSending(true);
 
@@ -187,24 +344,28 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
         {
           senderId: user.id,
           content: draft.trim(),
+          attachments: currentPendingAttachments.length > 0 ? currentPendingAttachments : undefined,
         },
         token,
       );
 
       const createdMessage = response.data;
+      const parsedContent = parseMessagePayload(createdMessage.content);
       const newChatMessage = {
         id: createdMessage.id,
         author:
           createdMessage.sender?.id === user.id
             ? "You"
             : createdMessage.sender?.name || "You",
-        content: createdMessage.content,
+        content: parsedContent.text,
         senderId: createdMessage.sender?.id || user.id,
+        attachments: parsedContent.attachments,
         createdAt: createdMessage.createdAt || new Date().toISOString(),
       };
 
       setMessages((current) => [...current, newChatMessage]);
       setDraft("");
+      setCurrentPendingAttachments([]);
       void updateTypingStatus(false);
       requestAnimationFrame(() => scrollToBottom());
 
@@ -212,7 +373,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
         new CustomEvent("conversationUpdated", {
           detail: {
             conversationId,
-            content: createdMessage.content,
+            content: parsedContent.text,
             senderId: createdMessage.sender?.id || user.id,
             senderName:
               createdMessage.sender?.id === user.id
@@ -244,6 +405,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
               key={message.id}
               author={message.author}
               content={message.content}
+              attachments={message.attachments}
               createdAt={message.createdAt}
               isOwn={message.senderId === user?.id}
             />
@@ -265,7 +427,10 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
           <MessageInput
             value={draft}
             onChange={handleDraftChange}
-            onSend={handleSend}
+            onSend={() => { void handleSend(); }}
+            onFileSelect={handleFileSelect}
+            pendingAttachments={currentPendingAttachments}
+            onRemoveAttachment={handleRemoveAttachment}
             disabled={isSending}
           />
         )}

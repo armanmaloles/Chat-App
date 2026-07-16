@@ -6,15 +6,92 @@ import {
   sendMessage,
 } from "../db/queries";
 
+type AttachmentPayload = {
+  dataUrl?: string;
+  fileName?: string;
+  mimeType?: string;
+  fileSize?: number;
+  kind?: string;
+};
+
+type MessagePayload = {
+  senderId: string;
+  content?: string;
+  attachment?: AttachmentPayload;
+  attachments?: AttachmentPayload[];
+};
+
 export const createMessageHandler = async (req: Request, res: Response) => {
   try {
     const conversationId = Array.isArray(req.params.conversationId)
       ? req.params.conversationId[0]
       : req.params.conversationId;
+
+    const body = req.body as MessagePayload;
+
+    if (!body.senderId || typeof body.senderId !== "string") {
+      return res.status(400).json({ error: "senderId is required" });
+    }
+
+    const attachments = Array.isArray(body.attachments)
+      ? body.attachments
+      : body.attachment
+      ? [body.attachment]
+      : [];
+    const content = typeof body.content === "string" ? body.content : "";
+    const allowedMimeTypes = [
+      // images
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/gif",
+      "image/webp",
+      "image/svg+xml",
+      // videos
+      "video/mp4",
+      "video/webm",
+      "video/quicktime",
+      // documents
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "text/csv",
+    ];
+
+    let storedContent = content;
+
+    if (attachments.length > 0) {
+      const validatedAttachments = attachments.map((attachment) => {
+        const mime = attachment.mimeType ?? "";
+        if (!mime || !allowedMimeTypes.includes(mime)) {
+          throw new Error("Unsupported file type");
+        }
+
+        const kind = mime.startsWith("video/") ? "video" : mime.startsWith("image/") ? "image" : "document";
+
+        return {
+          fileName: attachment.fileName,
+          mimeType: mime,
+          fileSize: attachment.fileSize ?? 0,
+          dataUrl: attachment.dataUrl,
+          kind,
+        };
+      });
+
+      storedContent = JSON.stringify({
+        text: content,
+        attachments: validatedAttachments,
+      });
+    }
+
     const message = await sendMessage({
       conversationId,
-      senderId: req.body.senderId,
-      content: req.body.content,
+      senderId: body.senderId,
+      content: storedContent,
     });
 
     return res.status(201).json(message);
