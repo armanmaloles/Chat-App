@@ -226,10 +226,12 @@ export const getConversationMessages = async (
 };
 
 export const deleteMessage = async (
-  id: string
+  id: string,
+  content: string,
 ) => {
   const [message] = await db
-    .delete(messages)
+    .update(messages)
+    .set({ content })
     .where(eq(messages.id, id))
     .returning();
 

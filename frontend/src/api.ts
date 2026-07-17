@@ -137,3 +137,8 @@ export const sendMessage = async (
   apiClient.post(`/conversations/${conversationId}/messages`, payload, {
     headers: getAuthHeaders(token),
   });
+
+export const deleteMessage = async (messageId: string, token?: string | null) =>
+  apiClient.delete(`/messages/${messageId}`, {
+    headers: getAuthHeaders(token),
+  });

@@ -30,7 +30,7 @@ const MessageInput = ({ value, onChange, onSend, onFileSelect, pendingAttachment
 
   return (
     <div className="message-input" style={{ flexDirection: "column", gap: 8, width: "100%" }}>
-      <div className="message-input__controls" style={{ display: "flex", gap: 12, alignItems: "flex-end", width: "100%" }}>
+      <div className="message-input__controls" style={{ display: "flex", gap: 12, alignItems: "flex-start", width: "100%" }}>
         <label className="message-input__attach" aria-label="Attach a file" role="button" tabIndex={0}>
           <input
             className="message-input__file"
@@ -44,7 +44,7 @@ const MessageInput = ({ value, onChange, onSend, onFileSelect, pendingAttachment
         </label>
         <div className="message-input__bubble" style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, padding: 5, borderRadius: 14, background: "#0f172a", border: "1px solid #334155" }}>
           {pendingAttachments.length > 0 && (
-            <div className="message-input__attachments" style={{ display: "flex", gap: 8, flexWrap: "nowrap", overflowX: "auto", alignItems: "center", width: "100%", paddingBottom: 6 }}>
+            <div className="message-input__attachments" style={{ order: 0, display: "flex", gap: 8, flexWrap: "nowrap", overflowX: "auto", alignItems: "center", width: "100%", paddingBottom: 6 }}>
               {pendingAttachments.map((attachment, index) => (
                 <div key={`${attachment.fileName}-${index}`} className="message-input__attachment" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 10, background: "rgba(255,255,255,0.08)" }}>
                   {attachment.kind === "image" ? (
@@ -82,7 +82,7 @@ const MessageInput = ({ value, onChange, onSend, onFileSelect, pendingAttachment
             placeholder="Type a message..."
             className="message-input__field"
             disabled={disabled}
-            style={{ width: "100%", border: "none", background: "transparent", outline: "none", padding: 0, color: "#e2e8f0" }}
+            style={{ order: 1, width: "100%", border: "none", background: "transparent", outline: "none", padding: 0, color: "#e2e8f0" }}
           />
         </div>
         <button onClick={onSend} className="message-input__button" disabled={disabled}>

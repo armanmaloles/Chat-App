@@ -9,7 +9,7 @@
   display: grid;
   gap: 12px;
   overflow-y: auto;
-  max-height: calc(100vh - 260px);
+  max-height: calc(100vh - 300px);
   padding-right: 4px;
 }
 
@@ -58,10 +58,17 @@
 .chat-window__footer {
   display: flex;
   flex-direction: column;
+  position: sticky;
+  bottom: 10px;
+  z-index: 10;
+  width: 100%;
+  min-height: 240px;
+  padding: 0;
+  background: rgba(15, 23, 42, 0.88);
 }
 
 .chat-window__typing-indicator {
-  padding: 10px 16px;
+  padding: 5px 8px;
   background: rgba(255, 255, 255, 0.04);
   border-radius: 18px;
   color: #cbd5e1;

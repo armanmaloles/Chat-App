@@ -3,6 +3,7 @@ import { useAuth, useUser } from "@clerk/clerk-react";
 import {
   getConversationMessages,
   sendMessage,
+  deleteMessage,
   setTypingStatus,
   getTypingStatus,
 } from "../api";
@@ -35,50 +36,78 @@ type ChatMessage = {
   senderId: string;
   attachments?: MessageAttachment[];
   createdAt?: string;
+  deleted?: boolean;
+  deletedById?: string;
+  deletedByName?: string;
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const parseMessagePayload = (content: string) => {
   if (!content) {
-    return { text: "", attachments: undefined as MessageAttachment[] | undefined };
-  }
-
-  try {
-    const parsed = JSON.parse(content);
-    if (parsed && typeof parsed === "object") {
-      const rawAttachments = Array.isArray(parsed.attachments)
-        ? parsed.attachments
-        : parsed.attachment
-        ? [parsed.attachment]
-        : undefined;
-
-      const attachments = rawAttachments?.map(
-        (attachment: MessageAttachment & { extension?: string }) => {
-          const extensionFromName = attachment.fileName?.split(".").pop()?.toLowerCase() ?? "";
-          return {
-            ...attachment,
-            kind: attachment.kind ?? getAttachmentKind(attachment.mimeType),
-            extension: attachment.extension ?? extensionFromName,
-            fileSize: attachment.fileSize ?? 0,
-            dataUrl: attachment.dataUrl ?? "",
-            mimeType: attachment.mimeType ?? "",
-            fileName: attachment.fileName ?? "file",
-          };
-        },
-      );
-
       return {
-        text: typeof parsed.text === "string" ? parsed.text : "",
-        attachments,
+        text: "",
+        attachments: undefined as MessageAttachment[] | undefined,
+        deleted: false,
+        deletedById: undefined,
+        deletedByName: undefined,
       };
     }
-  } catch {
-    // Fall back to plain text content.
-  }
 
-  return { text: content, attachments: undefined as MessageAttachment[] | undefined };
-};
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === "object") {
+        if (parsed.deleted) {
+          return {
+            text: "",
+            attachments: undefined as MessageAttachment[] | undefined,
+            deleted: true,
+            deletedById: typeof parsed.deletedById === "string" ? parsed.deletedById : undefined,
+            deletedByName: typeof parsed.deletedByName === "string" ? parsed.deletedByName : undefined,
+          };
+        }
+
+        const rawAttachments = Array.isArray(parsed.attachments)
+          ? parsed.attachments
+          : parsed.attachment
+          ? [parsed.attachment]
+          : undefined;
+
+        const attachments = rawAttachments?.map(
+          (attachment: MessageAttachment & { extension?: string }) => {
+            const extensionFromName = attachment.fileName?.split(".").pop()?.toLowerCase() ?? "";
+            return {
+              ...attachment,
+              kind: attachment.kind ?? getAttachmentKind(attachment.mimeType),
+              extension: attachment.extension ?? extensionFromName,
+              fileSize: attachment.fileSize ?? 0,
+              dataUrl: attachment.dataUrl ?? "",
+              mimeType: attachment.mimeType ?? "",
+              fileName: attachment.fileName ?? "file",
+            };
+          },
+        );
+
+        return {
+          text: typeof parsed.text === "string" ? parsed.text : "",
+          attachments,
+          deleted: false,
+          deletedById: undefined,
+          deletedByName: undefined,
+        };
+      }
+    } catch {
+      // Fall back to plain text content.
+    }
+
+    return {
+      text: content,
+      attachments: undefined as MessageAttachment[] | undefined,
+      deleted: false,
+      deletedById: undefined,
+      deletedByName: undefined,
+    };
+  };
 
 const getAttachmentKind = (mimeType: string) => {
   if (!mimeType) return "document" as const;
@@ -94,6 +123,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
   const [isSending, setIsSending] = useState(false);
   const [isConversationLoaded, setIsConversationLoaded] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Array<{ userId: string; userName: string }>>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingDebounceRef = useRef<number | null>(null);
   const { getToken } = useAuth();
@@ -180,6 +210,9 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
               senderId: message.sender?.id || "",
               attachments: parsedContent.attachments,
               createdAt: message.createdAt,
+              deleted: parsedContent.deleted,
+              deletedById: parsedContent.deletedById,
+              deletedByName: parsedContent.deletedByName,
             };
           }),
         );
@@ -332,6 +365,49 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
     setCurrentPendingAttachments(currentPendingAttachments.filter((_, idx) => idx !== index));
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!conversationId || !user?.id) return;
+    setIsDeleting(true);
+
+    try {
+      const token = await getToken();
+      const response = await deleteMessage(messageId, token);
+      const deletedMessage = response.data;
+      const parsedContent = parseMessagePayload(deletedMessage.content);
+
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === messageId
+            ? {
+                ...message,
+                content: parsedContent.text,
+                attachments: parsedContent.attachments,
+                deleted: parsedContent.deleted,
+                deletedById: parsedContent.deletedById,
+                deletedByName: parsedContent.deletedByName,
+              }
+            : message,
+        ),
+      );
+
+      window.dispatchEvent(
+        new CustomEvent("conversationUpdated", {
+          detail: {
+            conversationId,
+            content: parsedContent.deleted ? "Message deleted" : parsedContent.text,
+            senderId: user.id,
+            senderName: "You",
+            createdAt: new Date().toISOString(),
+          },
+        }),
+      );
+    } catch (error) {
+      console.error("Failed to delete message", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSend = async () => {
     if ((!draft.trim() && currentPendingAttachments.length === 0) || !conversationId || !user?.id) return;
 
@@ -408,6 +484,10 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
               attachments={message.attachments}
               createdAt={message.createdAt}
               isOwn={message.senderId === user?.id}
+              deleted={message.deleted}
+              deletedById={message.deletedById}
+              deletedByName={message.deletedByName}
+              onDelete={message.senderId === user?.id && !message.deleted ? () => void handleDeleteMessage(message.id) : undefined}
             />
           ))
         )}

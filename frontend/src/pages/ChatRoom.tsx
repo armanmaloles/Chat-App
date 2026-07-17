@@ -1,13 +1,68 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth, useUser } from "@clerk/clerk-react";
+import { removeConversationMember } from "../api";
+import { useNavigate } from "react-router-dom";
 import ChatWindow from "../components/ChatWindow";
 import { getConversation } from "../api";
+
+type LeaveGroupButtonProps = {
+  conversationId?: string | undefined;
+  onLeft?: () => void;
+};
+
+function LeaveGroupButton({ conversationId, onLeft }: LeaveGroupButtonProps) {
+  const { getToken } = useAuth();
+  const { user } = useUser();
+  const navigate = useNavigate();
+  const [leaving, setLeaving] = useState(false);
+
+  const handleLeave = async () => {
+    if (!conversationId || !user?.id) return;
+    const ok = window.confirm("Leave this group?");
+    if (!ok) return;
+    setLeaving(true);
+    try {
+      const token = await getToken();
+      await removeConversationMember(conversationId, user.id, token);
+      if (onLeft) onLeft();
+    } catch (err) {
+      console.error("Failed to leave group", err);
+      alert("Failed to leave group");
+    } finally {
+      setLeaving(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void handleLeave();
+      }}
+      disabled={leaving}
+      title="Leave group"
+      style={{
+        background: "#ef4444",
+        border: "1px solid rgba(0,0,0,0.12)",
+        color: "white",
+        padding: "6px 10px",
+        borderRadius: 8,
+        cursor: "pointer",
+      }}
+    >
+      {leaving ? "Leaving…" : "Leave"}
+    </button>
+  );
+}
 
 const ChatRoom = () => {
   const { id } = useParams();
   const [title, setTitle] = useState<string>("");
   const [subtitle, setSubtitle] = useState<string>("");
+  const [members, setMembers] = useState<Array<{ user?: { id?: string; name?: string | null; email?: string | null } }> | null>(null);
+  const [showMembers, setShowMembers] = useState(false);
   const { getToken } = useAuth();
   const { user } = useUser();
 
@@ -35,6 +90,7 @@ const ChatRoom = () => {
 
           setTitle(groupName);
           setSubtitle(memberNames ? `Members: ${memberNames}` : "Group chat");
+          setMembers(conversation.members || []);
         } else {
           const otherUser = conversation.members?.find(
             (member) => member.user?.id && member.user.id !== user.id,
@@ -60,9 +116,38 @@ const ChatRoom = () => {
 
   return (
     <div className="page page--chat-room">
-      <header className="chat-room__header">
+      <header className="chat-room__header" style={{ position: "relative" }}>
         <h1>{title || (id ? `Conversation ${id}` : "Unknown")}</h1>
-        {subtitle && <p>{subtitle}</p>}
+        
+        {members && members.length > 0 && (
+          <div style={{ position: "absolute", right: 12, top: 12, display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setShowMembers((v) => !v)}
+              aria-expanded={showMembers}
+              title={showMembers ? "Hide members" : "Show members"}
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.06)",
+                color: "#e2e8f0",
+                padding: "6px 10px",
+                borderRadius: 8,
+                cursor: "pointer",
+              }}
+            >
+              {showMembers ? "Hide members" : "Show members"}
+            </button>
+
+            <LeaveGroupButton
+              conversationId={id}
+              onLeft={() => {
+                // navigate back to groups list after leaving
+                navigate("/app/groups");
+              }}
+            />
+          </div>
+        )}
+
+        
       </header>
       <ChatWindow conversationId={id} />
     </div>

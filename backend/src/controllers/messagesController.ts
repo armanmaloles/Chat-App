@@ -6,6 +6,12 @@ import {
   sendMessage,
 } from "../db/queries";
 
+type ClerkRequest = Request & {
+  auth?: {
+    userId?: string | null;
+  };
+};
+
 type AttachmentPayload = {
   dataUrl?: string;
   fileName?: string;
@@ -132,8 +138,30 @@ export const getConversationMessagesHandler = async (req: Request, res: Response
 
 export const deleteMessageHandler = async (req: Request, res: Response) => {
   try {
+    const authReq = req as ClerkRequest;
+    const userId = authReq.auth?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
     const messageId = Array.isArray(req.params.messageId) ? req.params.messageId[0] : req.params.messageId;
-    const message = await deleteMessage(messageId);
+    const existingMessage = await getMessageById(messageId);
+
+    if (!existingMessage) {
+      return res.status(404).json({ error: "Message not found" });
+    }
+
+    if (existingMessage.senderId !== userId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const deletedContent = JSON.stringify({
+      deleted: true,
+      deletedById: existingMessage.senderId,
+      deletedByName: existingMessage.sender?.name || "Unknown",
+    });
+
+    const message = await deleteMessage(messageId, deletedContent);
 
     if (!message) {
       return res.status(404).json({ error: "Message not found" });

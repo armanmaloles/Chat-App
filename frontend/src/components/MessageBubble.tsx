@@ -13,9 +13,13 @@ type MessageBubbleProps = {
   attachments?: MessageAttachment[];
   createdAt?: string;
   isOwn?: boolean;
+  deleted?: boolean;
+  deletedById?: string;
+  deletedByName?: string;
+  onDelete?: () => void;
 };
 
-const MessageBubble = ({ author, content, attachments, createdAt, isOwn = false }: MessageBubbleProps) => {
+const MessageBubble = ({ author, content, attachments, createdAt, isOwn = false, deleted = false, deletedById, deletedByName, onDelete }: MessageBubbleProps) => {
   const formatBubbleTime = (dateString?: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -43,10 +47,27 @@ const MessageBubble = ({ author, content, attachments, createdAt, isOwn = false 
       <div className="message-bubble__author">
         <span>{author}</span>
         {createdAt && <span className="message-bubble__time">{formatBubbleTime(createdAt)}</span>}
+        {isOwn && onDelete && (
+          <button
+            type="button"
+            aria-label="Delete message"
+            title="Delete message"
+            onClick={onDelete}
+            className="message-bubble__delete"
+          >
+            🗑
+          </button>
+        )}
       </div>
       <div className="message-bubble__content">
-        {content ? <div>{content}</div> : null}
-        {attachments && attachments.length > 0 ? (
+        {deleted ? (
+          <div style={{ fontStyle: "italic", color: "#94a3b8" }}>
+            Message deleted
+          </div>
+        ) : (
+          content ? <div>{content}</div> : null
+        )}
+        {attachments && attachments.length > 0 && !deleted ? (
           <div style={{ marginTop: content ? "0.5rem" : 0, display: "grid", gap: "0.75rem" }}>
             {attachments.map((attachment, index) => (
               <div key={`${attachment.fileName}-${index}`}>

@@ -47,14 +47,20 @@ const getAttachmentPreview = (content: string, senderName: string) => {
 
   try {
     const parsed = JSON.parse(content);
-    if (parsed && typeof parsed === "object" && (Array.isArray(parsed.attachments) ? parsed.attachments.length > 0 : parsed.attachment)) {
-      if (senderName === "You") {
-        return `You sent an attachment`;
+    if (parsed && typeof parsed === "object") {
+      if (parsed.deleted) {
+        return "Message deleted";
       }
-      return `${senderName} sent an attachment`;
-    }
-    if (typeof parsed.text === "string" && parsed.text.trim()) {
-      return `${senderName}: ${parsed.text}`;
+
+      if (Array.isArray(parsed.attachments) ? parsed.attachments.length > 0 : parsed.attachment) {
+        if (senderName === "You") {
+          return `You sent an attachment`;
+        }
+        return `${senderName} sent an attachment`;
+      }
+      if (typeof parsed.text === "string" && parsed.text.trim()) {
+        return `${senderName}: ${parsed.text}`;
+      }
     }
   } catch {
     // Fall back to raw content

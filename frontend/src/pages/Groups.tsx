@@ -52,7 +52,6 @@ const Groups = () => {
   const [groupSearch, setGroupSearch] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [isCreating, setIsCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [convCollapsed, setConvCollapsed] = useState<boolean>(() => {
@@ -180,9 +179,6 @@ const Groups = () => {
     setSelected((s) => ({ ...s, [id]: !s[id] }));
   };
 
-  const toggleExpand = (id: string) => {
-    setExpanded((e) => ({ ...e, [id]: !e[id] }));
-  };
 
   const closeForm = () => {
     setShowForm(false);
@@ -505,14 +501,20 @@ const Groups = () => {
 
                 try {
                   const parsed = JSON.parse(content);
-                  if (parsed && typeof parsed === "object" && (Array.isArray(parsed.attachments) ? parsed.attachments.length > 0 : parsed.attachment)) {
-                    if (senderName === "You") {
-                      return `You sent an attachment`;
+                  if (parsed && typeof parsed === "object") {
+                    if (parsed.deleted) {
+                      return "Message deleted";
                     }
-                    return `${senderName} sent an attachment`;
-                  }
-                  if (typeof parsed.text === "string" && parsed.text.trim()) {
-                    return `${senderName}: ${parsed.text}`;
+
+                    if (Array.isArray(parsed.attachments) ? parsed.attachments.length > 0 : parsed.attachment) {
+                      if (senderName === "You") {
+                        return `You sent an attachment`;
+                      }
+                      return `${senderName} sent an attachment`;
+                    }
+                    if (typeof parsed.text === "string" && parsed.text.trim()) {
+                      return `${senderName}: ${parsed.text}`;
+                    }
                   }
                 } catch {
                   // Fall back to raw content
@@ -544,8 +546,6 @@ const Groups = () => {
                     new Date(lastMessage.createdAt) > lastReadAt)),
               );
 
-              const isExpanded = !!expanded[g.conversation.id];
-
               return (
                 <div key={g.conversation.id}>
                   <Link
@@ -566,7 +566,7 @@ const Groups = () => {
                     </div>
                     <div
                       className="conversation-list__meta"
-                      style={{ display: "flex", alignItems: "flex-end", justifyContent: "flex-end", gap: 1 }}
+                      style={{ display: "flex", alignItems: "flex-end", justifyContent: "flex-end", gap: 8 }}
                     >
                       {time && (
                         <span className="conversation-list__time">{time}</span>
@@ -574,72 +574,11 @@ const Groups = () => {
                       {lastMessage && isUnread ? (
                         <span className="conversation-list__badge" />
                       ) : null}
-                      <button
-                        aria-expanded={isExpanded}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleExpand(g.conversation.id);
-                        }}
-                        title={isExpanded ? "Collapse" : "Expand"}
-                        className="conversation-list__expand-button"
-                      >
-                        {isExpanded ? "▾" : "▸"}
-                      </button>
+                      
                     </div>
                   </Link>
 
-                  {isExpanded && (
-                    <div
-                      style={{
-                        background: "#0b1220",
-                        border: "1px solid rgba(255,255,255,0.03)",
-                        borderRadius: 12,
-                        padding: 12,
-                        marginTop: 6,
-                        maxWidth: 840,
-                      }}
-                    >
-                      <div
-                        style={{ display: "flex", gap: 12, flexWrap: "wrap" }}
-                      >
-                        {(g.conversation.members ?? []).map((m, idx) => (
-                          <div
-                            key={m.user?.id || idx}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              padding: "6px 8px",
-                              borderRadius: 8,
-                              background: "rgba(255,255,255,0.02)",
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: 32,
-                                height: 32,
-                                borderRadius: 16,
-                                background: "#1f2937",
-                                display: "grid",
-                                placeItems: "center",
-                                color: "#fff",
-                                fontWeight: 700,
-                              }}
-                            >
-                              {m.user?.name?.slice(0, 1).toUpperCase() || "?"}
-                            </div>
-                            <div style={{ color: "#e2e8f0", fontWeight: 600 }}>
-                              {m.user?.name || "Unknown"}
-                            </div>
-                          </div>
-                        ))}
-                        {(g.conversation.members ?? []).length === 0 && (
-                          <div style={{ color: "#94a3b8" }}>No members</div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  
                 </div>
               );
             })
