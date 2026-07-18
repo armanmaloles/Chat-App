@@ -112,6 +112,9 @@ const ChatLayout = () => {
     (path.startsWith("/app/groups/") && path !== "/app/groups")
   );
   const hideChatOnSettings = path.startsWith("/app/settings");
+  // When viewing Settings, ignore the conversation list collapsed state
+  // so the Settings view remains static and unaffected by collapsing.
+  const conversationCollapsedEffective = hideChatOnSettings ? false : conversationCollapsed;
   let content;
   if (path.startsWith("/app/groups")) {
     content = <Groups />;
@@ -145,7 +148,7 @@ const ChatLayout = () => {
       </header>
 
       <div
-        className={`app-content${sidebarCollapsed ? " app-content--sidebar-collapsed" : ""}${conversationCollapsed ? " app-content--conversation-collapsed" : ""}`}
+        className={`app-content${sidebarCollapsed ? " app-content--sidebar-collapsed" : ""}${conversationCollapsedEffective ? " app-content--conversation-collapsed" : ""}`}
       >
         <aside className="app-sidebar">
           <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />

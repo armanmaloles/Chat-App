@@ -271,44 +271,34 @@ const Groups = () => {
   } as const;
 
   return (
-    <div className="page page--groups">
-      <div style={headerStyle}>
-        <div style={leftColumnStyle}>
+    <div className={`page page--groups${convCollapsed ? " page--groups--collapsed" : ""}`}>
+      <div className="page--groups__header" style={headerStyle}>
+        <div className="page--groups__left" style={leftColumnStyle}>
           <button
-          aria-label="Toggle conversations"
-          title="Toggle conversations"
-          onClick={() => {
-            const next = !convCollapsed;
-            setConvCollapsed(next);
-            window.dispatchEvent(new Event("toggleConversationList"));
-          }}
-          style={{
-            marginTop: 10,
-            marginLeft: 10,
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            display: "grid",
-            placeItems: "center",
-            background: "#0b1220",
-            border: "1px solid rgba(255,255,255,0.04)",
-            color: "#cbd5e1",
-            cursor: "pointer",
-          }}
-        >
-          {convCollapsed ? ">" : "<"}
-        </button>
+            className="conversation-list__toggle"
+            onClick={() => {
+              const next = !convCollapsed;
+              setConvCollapsed(next);
+              window.dispatchEvent(new Event("toggleConversationList"));
+            }}
+            aria-expanded={!convCollapsed}
+            aria-label={convCollapsed ? "Expand" : "Collapse"}
+            title={convCollapsed ? "Expand" : "Collapse"}
+            style={{ marginTop : 24, marginLeft: 10 }}
+          > 
+            {convCollapsed ? "›" : "‹"}
+          </button>
           <h1 style={{ margin: "0px 10px" }}>Groups</h1>
         </div>
 
-        <div style={rightColumnStyle}>
-          <div style={{ height: 40 }} />
+        <div className="page--groups__right" style={rightColumnStyle}>
+          {!convCollapsed && <div style={{ height: 40 }} />}
           <button
             aria-label="Create group"
             className="button create-group"
             onClick={() => setShowForm(true)}
           >
-            Create group
+            {convCollapsed ? "+" : "Create group"}
           </button>
         </div>
       </div>
@@ -484,7 +474,7 @@ const Groups = () => {
         className="conversation-list__scroll-wrapper page--groups__group-list-wrapper"
         style={{ maxWidth: 840 }}
       >
-        <div className="conversation-list conversation-list--scroll" style={{ marginTop: "5px" }}>
+        <div className="conversation-list conversation-list--scroll group-conversation-list" style={{ marginTop: "5px" }}>
           {filteredGroups.length === 0 ? (
             <div className="conversation-list__empty">No groups yet.</div>
           ) : (
@@ -555,6 +545,9 @@ const Groups = () => {
                   >
                     <div className="conversation-list__avatar">
                       <span>{title.slice(0, 1).toUpperCase()}</span>
+                      {lastMessage && isUnread ? (
+                        <span className="conversation-list__badge conversation-list__badge--avatar" />
+                      ) : null}
                     </div>
                     <div className="conversation-list__details">
                       <div className="conversation-list__name">{title}</div>
@@ -566,19 +559,14 @@ const Groups = () => {
                     </div>
                     <div
                       className="conversation-list__meta"
-                      style={{ display: "flex", alignItems: "flex-end", justifyContent: "flex-end", gap: 8 }}
+                      style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "space-between", gap: 6 }}
                     >
-                      {time && (
-                        <span className="conversation-list__time">{time}</span>
-                      )}
+                      {time && <span className="conversation-list__time">{time}</span>}
                       {lastMessage && isUnread ? (
-                        <span className="conversation-list__badge" />
+                        <span className="conversation-list__badge conversation-list__badge--meta" />
                       ) : null}
-                      
                     </div>
                   </Link>
-
-                  
                 </div>
               );
             })

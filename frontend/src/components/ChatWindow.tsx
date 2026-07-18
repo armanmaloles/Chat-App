@@ -39,6 +39,7 @@ type ChatMessage = {
   deleted?: boolean;
   deletedById?: string;
   deletedByName?: string;
+  isSystemMessage?: boolean;
 };
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -114,6 +115,10 @@ const getAttachmentKind = (mimeType: string) => {
   if (mimeType.startsWith("image/")) return "image" as const;
   if (mimeType.startsWith("video/")) return "video" as const;
   return "document" as const;
+};
+
+const isSystemMessageContent = (content: string): boolean => {
+  return /(.+\s)?(joined|left)\s(the\s)?group/.test(content);
 };
 
 const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
@@ -198,23 +203,26 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
         ]);
 
         setMessages(
-          messagesResponse.data.map((message: BackendMessage) => {
-            const parsedContent = parseMessagePayload(message.content);
-            return {
-              id: message.id,
-              author:
-                message.sender?.id === user?.id
-                  ? "You"
-                  : message.sender?.name || "Unknown",
-              content: parsedContent.text,
-              senderId: message.sender?.id || "",
-              attachments: parsedContent.attachments,
-              createdAt: message.createdAt,
-              deleted: parsedContent.deleted,
-              deletedById: parsedContent.deletedById,
-              deletedByName: parsedContent.deletedByName,
-            };
-          }),
+          messagesResponse.data
+            .map((message: BackendMessage) => {
+              const parsedContent = parseMessagePayload(message.content);
+              return {
+                id: message.id,
+                author:
+                  message.sender?.id === user?.id
+                    ? "You"
+                    : message.sender?.name || "Unknown",
+                content: parsedContent.text,
+                senderId: message.sender?.id || "",
+                attachments: parsedContent.attachments,
+                createdAt: message.createdAt,
+                deleted: parsedContent.deleted,
+                deletedById: parsedContent.deletedById,
+                deletedByName: parsedContent.deletedByName,
+                isSystemMessage: isSystemMessageContent(parsedContent.text),
+              };
+            })
+            .filter((msg, index, self) => index === self.findIndex(m => m.id === msg.id)),
         );
 
         setTypingUsers(
@@ -488,6 +496,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
               deletedById={message.deletedById}
               deletedByName={message.deletedByName}
               onDelete={message.senderId === user?.id && !message.deleted ? () => void handleDeleteMessage(message.id) : undefined}
+              isSystemMessage={message.isSystemMessage}
             />
           ))
         )}

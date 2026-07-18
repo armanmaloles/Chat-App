@@ -30,7 +30,7 @@ type UserListProps = {
   showActions?: boolean;
 };
 
-const REFRESH_INTERVAL_MS = 30000;
+const REFRESH_INTERVAL_MS = 10000; // Reduced from 30000 to 10 seconds
 
 const UserList = ({ conversationId, showActions = false }: UserListProps) => {
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -87,8 +87,18 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
     void loadUsers();
     const intervalId = window.setInterval(() => void loadUsers(), REFRESH_INTERVAL_MS);
 
+    // Listen for visibility changes to refresh immediately when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void loadUsers();
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       window.clearInterval(intervalId);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
       if (loadingTimerRef.current) {
         window.clearTimeout(loadingTimerRef.current);
       }

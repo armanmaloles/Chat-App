@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { createUser, getAllUsers, getUserById, updateUser, upsertUser, deleteUser } from "../db/queries";
 
 const activeStatuses = new Map<string, number>();
-const ACTIVE_TIMEOUT_MS = 30000;
+const ACTIVE_TIMEOUT_MS = 15000; // Reduced from 30000 - users considered inactive after 15 seconds
 
 export const isUserActive = (userId: string) => activeStatuses.has(userId);
 

@@ -17,9 +17,10 @@ type MessageBubbleProps = {
   deletedById?: string;
   deletedByName?: string;
   onDelete?: () => void;
+  isSystemMessage?: boolean;
 };
 
-const MessageBubble = ({ author, content, attachments, createdAt, isOwn = false, deleted = false, deletedById, deletedByName, onDelete }: MessageBubbleProps) => {
+const MessageBubble = ({ author, content, attachments, createdAt, isOwn = false, deleted = false, deletedById, deletedByName, onDelete, isSystemMessage = false }: MessageBubbleProps) => {
   const formatBubbleTime = (dateString?: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -43,22 +44,24 @@ const MessageBubble = ({ author, content, attachments, createdAt, isOwn = false,
   };
 
   return (
-    <div className={`message-bubble ${isOwn ? "message-bubble--own" : ""}`}>
-      <div className="message-bubble__author">
-        <span>{author}</span>
-        {createdAt && <span className="message-bubble__time">{formatBubbleTime(createdAt)}</span>}
-        {isOwn && onDelete && (
-          <button
-            type="button"
-            aria-label="Delete message"
-            title="Delete message"
-            onClick={onDelete}
-            className="message-bubble__delete"
-          >
-            🗑
-          </button>
-        )}
-      </div>
+    <div className={`message-bubble ${isOwn ? "message-bubble--own" : ""} ${isSystemMessage ? "message-bubble--system" : ""}`}>
+      {!isSystemMessage && (
+        <div className="message-bubble__author">
+          <span>{author}</span>
+          {createdAt && <span className="message-bubble__time">{formatBubbleTime(createdAt)}</span>}
+          {isOwn && onDelete && (
+            <button
+              type="button"
+              aria-label="Delete message"
+              title="Delete message"
+              onClick={onDelete}
+              className="message-bubble__delete"
+            >
+              🗑
+            </button>
+          )}
+        </div>
+      )}
       <div className="message-bubble__content">
         {deleted ? (
           <div style={{ fontStyle: "italic", color: "#94a3b8" }}>

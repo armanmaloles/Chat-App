@@ -20,7 +20,6 @@
   flex-direction: column;
   gap: 16px;
   background: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 24px;
   padding: 16px;
   min-height: 0;
@@ -50,20 +49,25 @@
   max-height: 420px;
   overflow: hidden;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.02);
 }
 
 .page--groups .conversation-list__scroll-wrapper {
   min-height: 0;
   height: min(560px, calc(100vh - 240px));
-  max-height: calc(100vh - 220px);
+  max-height: calc(100vh - 320px);
+  display: flex;
+  flex-direction: column;
+  margin-left: 10px;
+  background: #0f172a;
 }
 
 .page--groups .conversation-list--scroll {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 100%;
+  gap: 5px;
+  height: 100%;
+  flex: 1 1 auto;
+  min-height: 110px;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -85,6 +89,14 @@
   background: #8a8a8a;
 }
 
+/* Specific styles for the Groups page list when larger list is desired */
+.page--groups .group-conversation-list {
+  min-height: 300px;
+  max-height: calc(100vh - 220px);
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
 .conversation-list__sidebar-content .conversation-list {
   margin-top: 0;
   border-radius: 20px;
@@ -99,7 +111,7 @@
   color: #e2e8f0;
   cursor: pointer;
   font-size: 1rem;
-  margin-left: 7px;
+  margin-left: 2px;
   transition: background 180ms ease, transform 180ms ease, border-color 180ms ease;
 }
 
@@ -143,7 +155,8 @@
 
 /* When the conversation list is collapsed, make the Groups page title smaller
    and show a compact '+' button for Create group */
-.app-content--conversation-collapsed .page--groups h1 {
+.app-content--conversation-collapsed .page--groups h1,
+.page--groups.page--groups--collapsed h1 {
   font-size: 1rem;
 }
 
@@ -151,26 +164,37 @@
   transition: width 180ms ease, height 180ms ease, font-size 120ms ease;
 }
 
-.app-content--conversation-collapsed .page--groups .button.create-group {
+.app-content--conversation-collapsed .page--groups .button.create-group,
+.page--groups.page--groups--collapsed .button.create-group {
   width: 40px;
   height: 40px;
   padding: 0;
   border-radius: 10px;
-  font-size: 0; /* hide text node */
+  font-size: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.app-content--conversation-collapsed .page--groups .button.create-group::after {
-  content: "+";
-  font-size: 18px;
-  line-height: 1;
-  color: #e2e8f0;
+.page--groups.page--groups--collapsed .page--groups__header {
+  flex-direction: column;
+  align-items: center;
+  margin: 0 0 0 15px;
+}
+
+.page--groups.page--groups--collapsed .page--groups__right {
+  display: flex;
+  align-items: center;
+  margin: 0 0 0 15px;
+}
+
+.page--groups.page--groups--collapsed .button.create-group {
+  margin: 0;
 }
 
 /* Hide the groups search when conversation list is collapsed */
-.app-content--conversation-collapsed .page--groups input[placeholder="Search groups by name"] {
+.app-content--conversation-collapsed .page--groups input[placeholder="Search groups by name"],
+.page--groups.page--groups--collapsed input[placeholder="Search groups by name"] {
   display: none;
 }
 
@@ -207,11 +231,18 @@
 }
 
 .app-content--conversation-collapsed .page--groups .conversation-list__details,
-.app-content--conversation-collapsed .page--groups .conversation-list__meta {
+.app-content--conversation-collapsed .page--groups .conversation-list__meta,
+.page--groups.page--groups--collapsed .conversation-list__details,
+.page--groups.page--groups--collapsed .conversation-list__meta {
   display: none;
 }
 
-.app-content--conversation-collapsed .page--groups .conversation-list__avatar {
+.page--groups.page--groups--collapsed .conversation-list__badge--meta {
+  display: none;
+}
+
+.app-content--conversation-collapsed .page--groups .conversation-list__avatar,
+.page--groups.page--groups--collapsed .conversation-list__avatar {
   width: 44px;
   height: 44px;
   min-width: 44px;
@@ -452,13 +483,33 @@
   font-weight: 700;
   color: #fff;
   background: linear-gradient(135deg, #2563eb, #0f172a);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
 }
 
 .conversation-list__avatar-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+.conversation-list__badge--avatar {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 28% 28%, #eff6ff 0%, #3b82f6 30%, #2563eb 65%, #1e40af 100%);
+  border: 2px solid rgba(15, 23, 42, 0.9);
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.45);
+  z-index: 2;
+  display: none;
+}
+
+.app-content--conversation-collapsed .page--groups .conversation-list__badge--avatar,
+.page--groups.page--groups--collapsed .conversation-list__badge--avatar {
   display: block;
 }
 
@@ -495,11 +546,19 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  gap: 6px;
+  min-width: max-content;
+}
+
+.app-content--conversation-collapsed .page--groups .conversation-list__time,
+.page--groups.page--groups--collapsed .conversation-list__time {
+  display: none;
 }
 
 .conversation-list__time {
   color: #94a3b8;
   font-size: 0.85rem;
+  line-height: 1;
 }
 
 .conversation-list__badge {
@@ -507,4 +566,12 @@
   height: 10px;
   border-radius: 50%;
   background: #2563eb;
+}
+
+.conversation-list__badge--meta {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2563eb;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
