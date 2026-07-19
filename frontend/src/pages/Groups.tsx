@@ -6,8 +6,8 @@ import {
   getUsers,
   createConversation,
   addConversationMember,
-} from "../api";
-
+} from "../lib/api";
+  
 type ConversationItem = {
   conversation: {
     id: string;

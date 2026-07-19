@@ -4,7 +4,7 @@ import ChatRoom from "./pages/ChatRoom";
 import NotFound from "./pages/NotFound";
 import Landing from "./pages/Landing";
 import ServerConnectionError from "./components/ServerConnectionError";
-import { useServerConnection } from "./context/ServerConnectionContext";
+import { useServerConnection } from "./context/useServerConnection";
 
 function App() {
   const { isServerReachable, checkConnection } = useServerConnection();

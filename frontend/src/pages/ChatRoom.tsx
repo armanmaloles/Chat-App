@@ -7,7 +7,7 @@ import {
   addConversationMember,
   removeConversationMember,
   updateConversationMemberSettings,
-} from "../api";
+} from "../lib/api";
 import { useNavigate, type NavigateFunction } from "react-router-dom";
 import ChatWindow from "../components/ChatWindow";
 
@@ -76,14 +76,16 @@ function LeaveGroupButton({
   );
 }
 
+type ConversationMember = {
+  user?: { id?: string; name?: string | null; email?: string | null };
+  notificationsEnabled?: boolean;
+};
+
 const ChatRoom = () => {
   const { id } = useParams();
   const [title, setTitle] = useState<string>("");
   const [subtitle, setSubtitle] = useState<string>("");
-  const [members, setMembers] = useState<Array<{
-    user?: { id?: string; name?: string | null; email?: string | null };
-    notificationsEnabled?: boolean;
-  }> | null>(null);
+  const [members, setMembers] = useState<ConversationMember[] | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [closeButtonHovered, setCloseButtonHovered] = useState(false);
   const [isGroup, setIsGroup] = useState(false);
@@ -110,9 +112,7 @@ const ChatRoom = () => {
           name?: string | null;
           isGroup?: boolean;
           creator?: { id?: string; name?: string | null };
-          members?: Array<{
-            user?: { id?: string; name?: string | null; email?: string | null };
-          }>;
+          members?: ConversationMember[];
         };
 
         if (conversation.isGroup) {
@@ -218,16 +218,6 @@ const ChatRoom = () => {
 
     void loadAvailableUsers();
   }, [showSettings, getToken, id, isGroup, members, user?.id]);
-
-  useEffect(() => {
-    const currentMember = members?.find(
-      (member) => member.user?.id === user?.id,
-    );
-
-    if (currentMember?.notificationsEnabled !== undefined) {
-      setNotificationsEnabled(currentMember.notificationsEnabled);
-    }
-  }, [members, user?.id]);
 
   const handleToggleConversationNotifications = async () => {
     if (!id || !user?.id) return;
@@ -455,6 +445,7 @@ const ChatRoom = () => {
                           className="chat-room__add-button"
                           onClick={() => void handleAddMember(available.id)}
                           disabled={addingUserId === available.id}
+                          style={{ backgroundColor: addingUserId === available.id ? "#94a3b8" : "#3b82f6" }}
                         >
                           {addingUserId === available.id ? "Adding…" : "Add"}
                         </button>

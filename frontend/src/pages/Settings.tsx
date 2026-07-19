@@ -7,7 +7,7 @@ import {
   updateUser,
   heartbeatUser,
   clearHeartbeatUser,
-} from "../api";
+} from "../lib/api";
 
 type Profile = {
   id: string;

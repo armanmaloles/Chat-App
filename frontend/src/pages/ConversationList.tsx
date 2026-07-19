@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { Link, useLocation } from "react-router-dom";
-import { getUserConversations } from "../api";
+import { getUserConversations } from "../lib/api";
 import UserList from "../components/UserList";
 
 type ConversationItem = {

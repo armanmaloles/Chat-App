@@ -14,13 +14,12 @@ type MessageBubbleProps = {
   createdAt?: string;
   isOwn?: boolean;
   deleted?: boolean;
-  deletedById?: string;
   deletedByName?: string;
   onDelete?: () => void;
   isSystemMessage?: boolean;
 };
 
-const MessageBubble = ({ author, content, attachments, createdAt, isOwn = false, deleted = false, deletedById, deletedByName, onDelete, isSystemMessage = false }: MessageBubbleProps) => {
+const MessageBubble = ({ author, content, attachments, createdAt, isOwn = false, deleted = false, deletedByName, onDelete, isSystemMessage = false }: MessageBubbleProps) => {
   const formatBubbleTime = (dateString?: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
@@ -65,7 +64,7 @@ const MessageBubble = ({ author, content, attachments, createdAt, isOwn = false,
       <div className="message-bubble__content">
         {deleted ? (
           <div style={{ fontStyle: "italic", color: "#94a3b8" }}>
-            Message deleted
+            {deletedByName ? `Message deleted by ${deletedByName}` : "Message deleted"}
           </div>
         ) : (
           content ? <div>{content}</div> : null

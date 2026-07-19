@@ -6,7 +6,7 @@ import {
   deleteMessage,
   setTypingStatus,
   getTypingStatus,
-} from "../api";
+} from "../lib/api";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 
@@ -128,7 +128,6 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
   const [isSending, setIsSending] = useState(false);
   const [isConversationLoaded, setIsConversationLoaded] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Array<{ userId: string; userName: string }>>([]);
-  const [isDeleting, setIsDeleting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingDebounceRef = useRef<number | null>(null);
   const { getToken } = useAuth();
@@ -222,7 +221,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
                 isSystemMessage: isSystemMessageContent(parsedContent.text),
               };
             })
-            .filter((msg, index, self) => index === self.findIndex(m => m.id === msg.id)),
+            .filter((msg: ChatMessage, index: number, self: ChatMessage[]) => index === self.findIndex((m) => m.id === msg.id)),
         );
 
         setTypingUsers(
@@ -375,7 +374,6 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!conversationId || !user?.id) return;
-    setIsDeleting(true);
 
     try {
       const token = await getToken();
@@ -411,8 +409,6 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
       );
     } catch (error) {
       console.error("Failed to delete message", error);
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -493,7 +489,6 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
               createdAt={message.createdAt}
               isOwn={message.senderId === user?.id}
               deleted={message.deleted}
-              deletedById={message.deletedById}
               deletedByName={message.deletedByName}
               onDelete={message.senderId === user?.id && !message.deleted ? () => void handleDeleteMessage(message.id) : undefined}
               isSystemMessage={message.isSystemMessage}

@@ -8,7 +8,7 @@ import { useAuth, useUser } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NotificationsModal from "../components/NotificationsModal";
-import { heartbeatUser, clearHeartbeatUser, getUser as getUserApi } from "../api";
+import { heartbeatUser, clearHeartbeatUser, getUser as getUserApi } from "../lib/api";
 
 function NotificationBell() {
   const [open, setOpen] = useState(false);

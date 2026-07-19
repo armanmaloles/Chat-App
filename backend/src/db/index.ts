@@ -9,8 +9,20 @@ if (!ENV.DATABASE_URL) {
 }
 
 // Create PostgreSQL connection pool
+const dbConnectionString = (() => {
+  const connectionString = ENV.DATABASE_URL!;
+
+  if (/uselibpqcompat=/i.test(connectionString)) {
+    return connectionString;
+  }
+
+  return connectionString.includes("?")
+    ? `${connectionString}&uselibpqcompat=true&sslmode=require`
+    : `${connectionString}?uselibpqcompat=true&sslmode=require`;
+})();
+
 const pool = new Pool({
-  connectionString: ENV.DATABASE_URL,
+  connectionString: dbConnectionString,
 
   // Optional settings
   max: 20, // Maximum number of connections

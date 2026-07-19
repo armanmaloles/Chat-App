@@ -1,30 +1,31 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
-import { getHealth } from "../api";
-
-type ServerConnectionContextType = {
-  isServerReachable: boolean | null;
-  checkConnection: () => Promise<void>;
-};
-
-const ServerConnectionContext = createContext<ServerConnectionContextType | undefined>(
-  undefined
-);
+import { getHealth } from "../lib/api";
+import { ServerConnectionContext } from "./ServerConnectionContextValue";
 
 export function ServerConnectionProvider({ children }: { children: ReactNode }) {
   const [isServerReachable, setIsServerReachable] = useState<boolean | null>(null);
 
-  const checkConnection = async () => {
+  const checkConnection = useCallback(async () => {
     try {
       await getHealth();
       setIsServerReachable(true);
     } catch {
       setIsServerReachable(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    checkConnection();
+    const loadConnection = async () => {
+      try {
+        await getHealth();
+        setIsServerReachable(true);
+      } catch {
+        setIsServerReachable(false);
+      }
+    };
+
+    void loadConnection();
   }, []);
 
   return (
@@ -34,12 +35,3 @@ export function ServerConnectionProvider({ children }: { children: ReactNode }) 
   );
 }
 
-export function useServerConnection() {
-  const context = useContext(ServerConnectionContext);
-  if (!context) {
-    throw new Error(
-      "useServerConnection must be used within ServerConnectionProvider"
-    );
-  }
-  return context;
-}

@@ -9,7 +9,7 @@ import {
   useAuth,
   useUser,
 } from "@clerk/clerk-react";
-import { upsertUser } from "../api";
+import { upsertUser } from "../lib/api";
 import "../styles/landing.css";
 
 function Landing() {

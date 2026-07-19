@@ -7,7 +7,7 @@ import {
   getConversationMembers,
   getUserConversations,
   getUsers,
-} from "../api";
+} from "../lib/api";
 
 type MemberEntry = {
   user?: {
@@ -23,6 +23,18 @@ type UserItem = {
   email?: string | null;
   imageUrl?: string | null;
   isActive?: boolean;
+};
+
+type UserConversationEntry = {
+  conversation?: {
+    id: string;
+    isGroup?: boolean;
+    members?: Array<{
+      user?: {
+        id?: string;
+      };
+    }>;
+  };
 };
 
 type UserListProps = {
@@ -111,12 +123,12 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
     try {
       const token = await getToken();
       const existingResponse = await getUserConversations(user.id, token);
-      const existingConversation = (existingResponse.data as any[]).find((entry) => {
+      const existingConversation = (existingResponse.data as UserConversationEntry[]).find((entry) => {
         const conversation = entry.conversation;
         if (!conversation || conversation.isGroup) return false;
 
         const memberIds = (conversation.members ?? [])
-          .map((member: any) => member.user?.id)
+          .map((member) => member.user?.id)
           .filter(Boolean);
 
         return (
@@ -126,7 +138,7 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
         );
       });
 
-      if (existingConversation) {
+      if (existingConversation?.conversation?.id) {
         navigate(`/app/chat/${existingConversation.conversation.id}`);
         return;
       }

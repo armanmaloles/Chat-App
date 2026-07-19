@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
 
-type Props = {
+type NotificationsModalProps = {
   onClose: () => void;
 };
 
-const NotificationsModal = ({ onClose }: Props) => {
+const NotificationsModal = ({ onClose }: NotificationsModalProps) => {
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
