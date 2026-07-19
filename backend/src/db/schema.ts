@@ -15,6 +15,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   imageUrl: text("image_url"),
+  activeStatusEnabled: boolean("active_status_enabled").notNull().default(true),
   isDeleted: boolean("is_deleted").notNull().default(false),
 
   createdAt: timestamp("created_at", {
@@ -77,6 +78,10 @@ export const conversationMembers = pgTable(
     })
       .notNull()
       .defaultNow(),
+
+    notificationsEnabled: boolean("notifications_enabled")
+      .notNull()
+      .default(true),
   },
   (table) => ({
     pk: primaryKey({

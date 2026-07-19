@@ -12,6 +12,7 @@ type UserPayload = {
   email?: string | null;
   name?: string | null;
   imageUrl?: string | null;
+  activeStatusEnabled?: boolean;
 };
 
 type ConversationPayload = {
@@ -50,6 +51,11 @@ export const getUsers = async (token?: string | null) =>
 
 export const heartbeatUser = async (token?: string | null) =>
   apiClient.post("/users/active", null, {
+    headers: getAuthHeaders(token),
+  });
+
+export const clearHeartbeatUser = async (token?: string | null) =>
+  apiClient.delete("/users/active", {
     headers: getAuthHeaders(token),
   });
 
@@ -101,6 +107,18 @@ export const removeConversationMember = async (
   apiClient.delete(`/conversations/${conversationId}/members/${userId}`, {
     headers: getAuthHeaders(token),
   });
+
+export const updateConversationMemberSettings = async (
+  conversationId: string,
+  userId: string,
+  payload: { notificationsEnabled: boolean },
+  token?: string | null,
+) =>
+  apiClient.put(
+    `/conversations/${conversationId}/members/${userId}/settings`,
+    payload,
+    { headers: getAuthHeaders(token) },
+  );
 
 export const getConversationMessages = async (
   conversationId: string,

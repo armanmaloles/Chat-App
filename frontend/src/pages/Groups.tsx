@@ -284,7 +284,7 @@ const Groups = () => {
             aria-expanded={!convCollapsed}
             aria-label={convCollapsed ? "Expand" : "Collapse"}
             title={convCollapsed ? "Expand" : "Collapse"}
-            style={{ marginTop : 24, marginLeft: 10 }}
+            style={{ marginTop : 17, marginLeft: 10 }}
           > 
             {convCollapsed ? "›" : "‹"}
           </button>

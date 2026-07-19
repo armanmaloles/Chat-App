@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth, useUser } from "@clerk/clerk-react";
-import { getConversation, getUsers, addConversationMember, removeConversationMember } from "../api";
+import {
+  getConversation,
+  getUsers,
+  addConversationMember,
+  removeConversationMember,
+  updateConversationMemberSettings,
+} from "../api";
 import { useNavigate, type NavigateFunction } from "react-router-dom";
 import ChatWindow from "../components/ChatWindow";
 
@@ -11,7 +17,11 @@ type LeaveGroupButtonProps = {
   navigate?: NavigateFunction;
 };
 
-function LeaveGroupButton({ conversationId, onLeft, navigate: navigateProp }: LeaveGroupButtonProps) {
+function LeaveGroupButton({
+  conversationId,
+  onLeft,
+  navigate: navigateProp,
+}: LeaveGroupButtonProps) {
   const { getToken } = useAuth();
   const { user } = useUser();
   const navigateDefault = useNavigate();
@@ -25,7 +35,11 @@ function LeaveGroupButton({ conversationId, onLeft, navigate: navigateProp }: Le
     setLeaving(true);
     try {
       const token = await getToken();
-      const response = await removeConversationMember(conversationId, user.id, token);
+      const response = await removeConversationMember(
+        conversationId,
+        user.id,
+        token,
+      );
       console.log("Successfully left group", response);
       if (onLeft) onLeft();
       // Navigate away after successful removal
@@ -37,7 +51,8 @@ function LeaveGroupButton({ conversationId, onLeft, navigate: navigateProp }: Le
         errorMessage = err.message;
       } else if (err && typeof err === "object" && "response" in err) {
         const axiosError = err as { response?: { data?: { error?: string } } };
-        errorMessage = axiosError.response?.data?.error || "Failed to leave group";
+        errorMessage =
+          axiosError.response?.data?.error || "Failed to leave group";
       }
       alert(errorMessage);
     } finally {
@@ -54,14 +69,7 @@ function LeaveGroupButton({ conversationId, onLeft, navigate: navigateProp }: Le
       }}
       disabled={leaving}
       title="Leave group"
-      style={{
-        background: "#ef4444",
-        border: "1px solid rgba(0,0,0,0.12)",
-        color: "white",
-        padding: "6px 10px",
-        borderRadius: 8,
-        cursor: "pointer",
-      }}
+      className="chat-room__leave-button"
     >
       {leaving ? "Leaving…" : "Leave"}
     </button>
@@ -72,11 +80,19 @@ const ChatRoom = () => {
   const { id } = useParams();
   const [title, setTitle] = useState<string>("");
   const [subtitle, setSubtitle] = useState<string>("");
-  const [members, setMembers] = useState<Array<{ user?: { id?: string; name?: string | null; email?: string | null } }> | null>(null);
-  const [showMembers, setShowMembers] = useState(false);
+  const [members, setMembers] = useState<Array<{
+    user?: { id?: string; name?: string | null; email?: string | null };
+    notificationsEnabled?: boolean;
+  }> | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const [closeButtonHovered, setCloseButtonHovered] = useState(false);
   const [isGroup, setIsGroup] = useState(false);
-  const [availableUsers, setAvailableUsers] = useState<Array<{ id: string; name: string; email?: string | null }>>([]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationError, setNotificationError] = useState<string | null>(null);
+  const [availableUsers, setAvailableUsers] = useState<
+    Array<{ id: string; name: string; email?: string | null }>
+  >([]);
   const [searchMembers, setSearchMembers] = useState("");
   const [usersLoading, setUsersLoading] = useState(false);
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
@@ -94,26 +110,54 @@ const ChatRoom = () => {
           name?: string | null;
           isGroup?: boolean;
           creator?: { id?: string; name?: string | null };
-          members?: Array<{ user?: { id?: string; name?: string | null; email?: string | null } }>;
+          members?: Array<{
+            user?: { id?: string; name?: string | null; email?: string | null };
+          }>;
         };
 
         if (conversation.isGroup) {
           const groupName = conversation.name || "Group chat";
           const memberNames = conversation.members
             ?.map((member) => member.user)
-            .filter((userInfo): userInfo is { id: string; name?: string | null; email?: string | null } => Boolean(userInfo && userInfo.id !== user.id))
+            .filter(
+              (
+                userInfo,
+              ): userInfo is {
+                id: string;
+                name?: string | null;
+                email?: string | null;
+              } => Boolean(userInfo && userInfo.id !== user.id),
+            )
             .map((member) => member.name || member.email || "Unknown")
             .join(", ");
 
           setTitle(groupName);
           setSubtitle(memberNames ? `Members: ${memberNames}` : "Group chat");
           setMembers(conversation.members || []);
+
+          const currentMember = conversation.members?.find(
+            (member) => member.user?.id === user.id,
+          );
+          setNotificationsEnabled(
+            currentMember?.notificationsEnabled ?? true,
+          );
+
           setIsGroup(true);
         } else {
           setIsGroup(false);
+          setMembers(conversation.members || []);
+
           const otherUser = conversation.members?.find(
             (member) => member.user?.id && member.user.id !== user.id,
           )?.user;
+
+          const currentMember = conversation.members?.find(
+            (member) => member.user?.id === user.id,
+          );
+
+          setNotificationsEnabled(
+            currentMember?.notificationsEnabled ?? true,
+          );
 
           const name =
             otherUser?.name ||
@@ -135,18 +179,29 @@ const ChatRoom = () => {
 
   useEffect(() => {
     const loadAvailableUsers = async () => {
-      if (!showMembers || !id || !user?.id || !isGroup) return;
+      if (!showSettings || !id || !user?.id || !isGroup) return;
 
       try {
         setUsersLoading(true);
         const token = await getToken();
         const response = await getUsers(token);
         const currentMemberIds = new Set(
-          members?.map((member) => member.user?.id).filter((id): id is string => Boolean(id)) ?? [],
+          members
+            ?.map((member) => member.user?.id)
+            .filter((id): id is string => Boolean(id)) ?? [],
         );
 
-        const users = (response.data as Array<{ id: string; name?: string | null; email?: string | null }>)
-          .filter((userData) => userData.id !== user.id && !currentMemberIds.has(userData.id))
+        const users = (
+          response.data as Array<{
+            id: string;
+            name?: string | null;
+            email?: string | null;
+          }>
+        )
+          .filter(
+            (userData) =>
+              userData.id !== user.id && !currentMemberIds.has(userData.id),
+          )
           .map((userData) => ({
             id: userData.id,
             name: userData.name || userData.email || "Unknown user",
@@ -162,11 +217,67 @@ const ChatRoom = () => {
     };
 
     void loadAvailableUsers();
-  }, [showMembers, getToken, id, isGroup, members, user?.id]);
+  }, [showSettings, getToken, id, isGroup, members, user?.id]);
 
-  const filteredAvailableUsers = availableUsers.filter((available) =>
-    available.name.toLowerCase().includes(searchMembers.toLowerCase()) ||
-    (available.email?.toLowerCase().includes(searchMembers.toLowerCase()) ?? false),
+  useEffect(() => {
+    const currentMember = members?.find(
+      (member) => member.user?.id === user?.id,
+    );
+
+    if (currentMember?.notificationsEnabled !== undefined) {
+      setNotificationsEnabled(currentMember.notificationsEnabled);
+    }
+  }, [members, user?.id]);
+
+  const handleToggleConversationNotifications = async () => {
+    if (!id || !user?.id) return;
+
+    setNotificationError(null);
+    setNotificationLoading(true);
+
+    try {
+      const token = await getToken();
+      const response = await updateConversationMemberSettings(
+        id,
+        user.id,
+        { notificationsEnabled: !notificationsEnabled },
+        token,
+      );
+
+      const enabled = response.data.notificationsEnabled;
+      setNotificationsEnabled(enabled);
+      setMembers((current) =>
+        current?.map((member) =>
+          member.user?.id === user.id
+            ? { ...member, notificationsEnabled: enabled }
+            : member,
+        ) ?? current,
+      );
+    } catch (error) {
+      console.error("Failed to update conversation notification settings", error);
+      setNotificationError("Unable to save notification settings. Please try again.");
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  const filteredMembers = members?.filter((member) => {
+    const userInfo = member.user;
+    if (!userInfo) return false;
+    const query = searchMembers.trim().toLowerCase();
+    if (!query) return true;
+
+    const name = userInfo.name?.toLowerCase() ?? "";
+    const email = userInfo.email?.toLowerCase() ?? "";
+
+    return name.includes(query) || email.includes(query);
+  });
+
+  const filteredAvailableUsers = availableUsers.filter(
+    (available) =>
+      available.name.toLowerCase().includes(searchMembers.toLowerCase()) ||
+      (available.email?.toLowerCase().includes(searchMembers.toLowerCase()) ??
+        false),
   );
 
   const handleAddMember = async (userId: string) => {
@@ -182,7 +293,9 @@ const ChatRoom = () => {
           ...(current ?? []),
           { user: { id: added.id, name: added.name, email: added.email } },
         ]);
-        setAvailableUsers((prev) => prev.filter((userData) => userData.id !== userId));
+        setAvailableUsers((prev) =>
+          prev.filter((userData) => userData.id !== userId),
+        );
       }
     } catch (error) {
       console.error("Failed to add member", error);
@@ -194,189 +307,175 @@ const ChatRoom = () => {
 
   return (
     <div className="page page--chat-room">
-      <header className="chat-room__header" style={{ position: "relative" }}>
-        <h1>{title || (id ? `Conversation ${id}` : "Unknown")}</h1>
-        
-        {members && members.length > 0 && (
-          <div style={{ position: "absolute", right: 12, top: 12, display: "flex", gap: 8 }}>
-            <button
-              onClick={() => setShowMembers(true)}
-              aria-expanded={showMembers}
-              title="View members"
-              style={{
-                background: "transparent",
-                border: "1px solid rgba(255,255,255,0.06)",
-                color: "#e2e8f0",
-                padding: "6px 10px",
-                borderRadius: 8,
-                cursor: "pointer",
-              }}
-            >
-              Members
-            </button>
+      <header className="chat-room__header">
+        <div className="chat-room__title-group">
+          <h1>{title || (id ? `Conversation ${id}` : "Unknown")}</h1>
+          {subtitle && <p className="chat-room__subtitle">{subtitle}</p>}
+        </div>
 
-            <LeaveGroupButton
-              conversationId={id}
-            />
-          </div>
-        )}
-
-        
+        <button
+          type="button"
+          className="chat-room__settings-button"
+          onClick={() => setShowSettings(true)}
+          aria-expanded={showSettings}
+          aria-label="Conversation settings"
+          title="Conversation settings"
+        >
+          <span>⚙️</span>
+        </button>
       </header>
 
-      {showMembers && members && members.length > 0 && (
+      {showSettings && members && members.length > 0 && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Conversation members"
-          onClick={() => setShowMembers(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
-            background: "rgba(0,0,0,0.55)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-          }}
+          aria-label="Conversation settings"
+          onClick={() => setShowSettings(false)}
+          className="chat-room__settings-modal"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "min(560px, 100%)",
-              maxHeight: "85vh",
-              overflow: "auto",
-              background: "#0f1724",
-              borderRadius: 16,
-              border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.45)",
-              padding: 24,
-            }}
+            className="chat-room__settings-panel"
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18, gap: 12 }}>
+            <div className="chat-room__settings-panel-header">
               <div>
-                <h2 style={{ margin: 0, color: "#fff", fontSize: "1.25rem" }}>Conversation members</h2>
-                <p style={{ margin: "6px 0 0", color: "#94a3b8" }}>
+                <h2 className="chat-room__section-title">Conversation settings</h2>
+                <p className="chat-room__section-description">
                   {members.length} member{members.length === 1 ? "" : "s"}
                 </p>
               </div>
               <button
-                onClick={() => setShowMembers(false)}
+                type="button"
+                className={`chat-room__settings-close ${closeButtonHovered ? "chat-room__settings-close--hover" : ""}`}
+                onClick={() => setShowSettings(false)}
                 onMouseEnter={() => setCloseButtonHovered(true)}
                 onMouseLeave={() => setCloseButtonHovered(false)}
-                style={{
-                  background: "transparent",
-                  border: closeButtonHovered ? "1px solid #ef4444" : "1px solid rgba(255,255,255,0.08)",
-                  color: closeButtonHovered ? "#ef4444" : "#e2e8f0",
-                  padding: "8px 12px",
-                  borderRadius: 10,
-                  cursor: "pointer",
-                  transition: "all 150ms ease",
-                }}
               >
                 Close
               </button>
             </div>
 
-            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 10 }}>
-              {members.map((member) => {
-                const userInfo = member.user;
-                if (!userInfo?.id) return null;
-                const isCurrentUser = userInfo.id === user?.id;
-                return (
-                  <li
-                    key={userInfo.id}
-                    style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 14,
-                      padding: "14px 16px",
-                    }}
-                  >
-                    <strong style={{ display: "block", color: "#fff", marginBottom: 4 }}>
-                      {userInfo.name || userInfo.email || "Unknown"}
-                      {isCurrentUser ? " (You)" : ""}
-                    </strong>
-                    {userInfo.email && (
-                      <span style={{ color: "#cbd5e1" }}>{userInfo.email}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            <section className="chat-room__settings-section">
+              <div className="chat-room__settings-row">
+                <div>
+                  <div className="chat-room__section-title">Conversation notifications</div>
+                  <p className="chat-room__section-description">
+                    Notification is currently {notificationsEnabled ? "on" : "off"} for this conversation.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={`conversation-notifications-toggle ${notificationsEnabled ? "conversation-notifications-toggle--on" : "conversation-notifications-toggle--off"}`}
+                  onClick={handleToggleConversationNotifications}
+                  disabled={notificationLoading}
+                  aria-pressed={notificationsEnabled}
+                >
+                  <span className="conversation-notifications-toggle__segment conversation-notifications-toggle__segment--off">Off</span>
+                  <span className="conversation-notifications-toggle__segment conversation-notifications-toggle__segment--on">On</span>
+                </button>
+              </div>
+
+              {notificationError && (
+                <div className="chat-room__error-text">{notificationError}</div>
+              )}
+            </section>
 
             {isGroup && (
-              <div style={{ marginTop: 24 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <section className="chat-room__settings-section">
+                <div className="chat-room__section-row">
                   <div>
-                    <h3 style={{ margin: 0, color: "#fff", fontSize: "1rem" }}>Add member</h3>
+                    <div className="chat-room__section-title">Members</div>
+                    <p className="chat-room__section-description">
+                      Manage the members in this group conversation.
+                    </p>
                   </div>
                   <input
                     type="text"
                     value={searchMembers}
                     onChange={(e) => setSearchMembers(e.target.value)}
-                    placeholder="Search users by name or email"
-                    style={{
-                      flex: "1 1 220px",
-                      minWidth: 220,
-                      padding: "10px 12px",
-                      borderRadius: 10,
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      background: "rgba(255,255,255,0.04)",
-                      color: "#e2e8f0",
-                    }}
+                    placeholder="Search members by name or email"
+                    className="chat-room__search-input"
                   />
                 </div>
 
-                <div style={{ marginTop: 16 }}>
-                  {usersLoading ? (
-                    <p style={{ color: "#cbd5e1" }}>Loading available users…</p>
-                  ) : filteredAvailableUsers.length === 0 ? (
-                    <p style={{ color: "#cbd5e1" }}>
-                      No additional users are available to add.
-                    </p>
-                  ) : (
-                    <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gap: 10 }}>
-                      {filteredAvailableUsers.map((available) => (
-                        <li
-                          key={available.id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            gap: 12,
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            borderRadius: 14,
-                            padding: "12px 14px",
-                          }}
-                        >
+                <ul className="chat-room__members-list">
+                  {filteredMembers?.length ? (
+                    filteredMembers.map((member) => {
+                      const userInfo = member.user;
+                      if (!userInfo?.id) return null;
+                      const isCurrentUser = userInfo.id === user?.id;
+                      return (
+                        <li key={userInfo.id} className="chat-room__member-item">
                           <div>
-                            <div style={{ color: "#fff", fontWeight: 600 }}>{available.name}</div>
-                            {available.email && (
-                              <div style={{ color: "#94a3b8", marginTop: 4 }}>{available.email}</div>
+                            <div className="chat-room__member-name">
+                              {userInfo.name || userInfo.email || "Unknown"}
+                              {isCurrentUser ? " (You)" : ""}
+                            </div>
+                            {userInfo.email && (
+                              <div className="chat-room__member-email">{userInfo.email}</div>
                             )}
                           </div>
-                          <button
-                            onClick={() => void handleAddMember(available.id)}
-                            disabled={addingUserId === available.id}
-                            style={{
-                              background: addingUserId === available.id ? "rgba(148,163,184,0.24)" : "#2563eb",
-                              border: "none",
-                              color: "white",
-                              padding: "8px 14px",
-                              borderRadius: 10,
-                              cursor: addingUserId === available.id ? "default" : "pointer",
-                            }}
-                          >
-                            {addingUserId === available.id ? "Adding…" : "Add"}
-                          </button>
                         </li>
-                      ))}
-                    </ul>
+                      );
+                    })
+                  ) : (
+                    <li className="chat-room__empty-state">No members match your search.</li>
                   )}
+                </ul>
+              </section>
+            )}
+
+            {isGroup && (
+              <section className="chat-room__settings-section">
+                <div className="chat-room__section-row">
+                  <div>
+                    <div className="chat-room__section-title">Add members</div>
+                    <p className="chat-room__section-description">
+                      Invite more people into the conversation.
+                    </p>
+                  </div>
                 </div>
+
+                {usersLoading ? (
+                  <p className="chat-room__section-description">Loading available users…</p>
+                ) : filteredAvailableUsers.length === 0 ? (
+                  <p className="chat-room__section-description">No additional users are available to add.</p>
+                ) : (
+                  <ul className="chat-room__members-list">
+                    {filteredAvailableUsers.map((available) => (
+                      <li key={available.id} className="chat-room__member-item">
+                        <div>
+                          <div className="chat-room__member-name">{available.name}</div>
+                          {available.email && (
+                            <div className="chat-room__member-email">{available.email}</div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="chat-room__add-button"
+                          onClick={() => void handleAddMember(available.id)}
+                          disabled={addingUserId === available.id}
+                        >
+                          {addingUserId === available.id ? "Adding…" : "Add"}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
+
+            {isGroup && (
+              <div className="chat-room__action-footer">
+                <LeaveGroupButton
+                  conversationId={id}
+                  onLeft={() => {
+                    setMembers((current) =>
+                      current?.filter((member) => member.user?.id !== user?.id) ?? null,
+                    );
+                    setShowSettings(false);
+                  }}
+                />
               </div>
             )}
           </div>

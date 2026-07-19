@@ -58,12 +58,23 @@ export const deleteUser = async (id: string) => {
 };
 
 export const upsertUser = async (data: NewUser) => {
+  const insertData = { ...data };
+  const updateData: Partial<NewUser> = {
+    email: data.email,
+    name: data.name,
+    imageUrl: data.imageUrl,
+  };
+
+  if (data.activeStatusEnabled !== undefined) {
+    updateData.activeStatusEnabled = data.activeStatusEnabled;
+  }
+
   const [user] = await db
     .insert(users)
-    .values(data)
+    .values(insertData)
     .onConflictDoUpdate({
       target: users.id,
-      set: data,
+      set: updateData,
     })
     .returning();
 
@@ -158,6 +169,25 @@ export const removeMemberFromConversation = async (
       and(
         eq(conversationMembers.conversationId, conversationId),
         eq(conversationMembers.userId, userId)
+      )
+    )
+    .returning();
+
+  return member;
+};
+
+export const updateConversationMemberSettings = async (
+  conversationId: string,
+  userId: string,
+  data: { notificationsEnabled?: boolean },
+) => {
+  const [member] = await db
+    .update(conversationMembers)
+    .set(data)
+    .where(
+      and(
+        eq(conversationMembers.conversationId, conversationId),
+        eq(conversationMembers.userId, userId),
       )
     )
     .returning();

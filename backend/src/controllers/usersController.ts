@@ -68,6 +68,23 @@ export const setActiveHandler = async (req: Request, res: Response) => {
   }
 };
 
+export const clearActiveHandler = async (req: Request, res: Response) => {
+  try {
+    const authUserId = (req as any).auth?.userId;
+    if (!authUserId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    activeStatuses.delete(authUserId);
+    cleanupActiveStatuses();
+
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    console.error("Clear active status error:", error);
+    return res.status(500).json({ error: "Failed to clear active status" });
+  }
+};
+
 export const getUserHandler = async (req: Request, res: Response) => {
   try {
     const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;

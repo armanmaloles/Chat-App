@@ -4,11 +4,11 @@ import ConversationList from "../pages/ConversationList";
 import Groups from "../pages/Groups";
 import Notifications from "../pages/Notifications";
 import Settings from "../pages/Settings";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NotificationsModal from "../components/NotificationsModal";
-import { heartbeatUser } from "../api";
+import { heartbeatUser, clearHeartbeatUser, getUser as getUserApi } from "../api";
 
 function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -34,6 +34,7 @@ function NotificationBell() {
 
 const ChatLayout = () => {
   const { isSignedIn, getToken } = useAuth();
+  const { user } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname || "";
@@ -49,6 +50,13 @@ const ChatLayout = () => {
       return localStorage.getItem("chatApp:conversationListCollapsed") === "1";
     } catch {
       return false;
+    }
+  });
+  const [activeStatusEnabled, setActiveStatusEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("chatApp:activeStatusEnabled") !== "0";
+    } catch {
+      return true;
     }
   });
 
@@ -85,12 +93,49 @@ const ChatLayout = () => {
   }, []);
 
   useEffect(() => {
+    const preferenceHandler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ enabled: boolean }>;
+      setActiveStatusEnabled(customEvent.detail.enabled);
+    };
+
+    window.addEventListener("activeStatusPreferenceChanged", preferenceHandler as EventListener);
+    return () => window.removeEventListener("activeStatusPreferenceChanged", preferenceHandler as EventListener);
+  }, []);
+
+  useEffect(() => {
     if (!isSignedIn) navigate("/");
   }, [isSignedIn, navigate]);
 
   useEffect(() => {
+    const loadActiveStatusPreference = async () => {
+      if (!isSignedIn || !user?.id) return;
+
+      try {
+        const token = await getToken();
+        const response = await getUserApi(user.id, token);
+        const enabled = response.data.activeStatusEnabled;
+        if (typeof enabled === "boolean") {
+          setActiveStatusEnabled(enabled);
+          try {
+            localStorage.setItem("chatApp:activeStatusEnabled", enabled ? "1" : "0");
+          } catch {
+            /* ignore */
+          }
+          if (!enabled) {
+            await clearHeartbeatUser(token);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load active status preference", error);
+      }
+    };
+
+    void loadActiveStatusPreference();
+  }, [getToken, isSignedIn, user?.id]);
+
+  useEffect(() => {
     const heartbeat = async () => {
-      if (!isSignedIn) return;
+      if (!isSignedIn || !activeStatusEnabled) return;
       try {
         const token = await getToken();
         await heartbeatUser(token);
@@ -99,13 +144,16 @@ const ChatLayout = () => {
       }
     };
 
-    void heartbeat();
+    if (activeStatusEnabled) {
+      void heartbeat();
+    }
+
     const intervalId = window.setInterval(() => void heartbeat(), 15000);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [getToken, isSignedIn]);
+  }, [getToken, isSignedIn, activeStatusEnabled]);
 
   const showChatPlaceholder = !(
     path.startsWith("/app/chat/") ||
