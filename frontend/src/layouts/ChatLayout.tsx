@@ -5,27 +5,166 @@ import Groups from "../pages/Groups";
 import Notifications from "../pages/Notifications";
 import Settings from "../pages/Settings";
 import { useAuth, useUser } from "@clerk/clerk-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import NotificationsModal from "../components/NotificationsModal";
-import { heartbeatUser, clearHeartbeatUser, getUser as getUserApi } from "../lib/api";
+import { getUserConversations, getConversationMessages, heartbeatUser, clearHeartbeatUser, getUser as getUserApi } from "../lib/api";
+
+type NotificationSummary = {
+  conversationId: string;
+  conversationName: string;
+  unreadCount: number;
+  latestAt: string;
+};
 
 function NotificationBell() {
+  const { getToken } = useAuth();
+  const { user } = useUser();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const getConversationTitle = useCallback((conversation: any) => {
+    if (conversation.isGroup) {
+      return conversation.name || "Group chat";
+    }
+
+    const otherMember = conversation.members?.find(
+      (member: any) => member.user?.id !== user?.id,
+    )?.user;
+
+    return otherMember?.name || otherMember?.email || "Conversation";
+  }, [user?.id]);
+
+  const getLastReadDate = (conversationId: string) => {
+    const stored = localStorage.getItem(`chatApp:conversation:read:${conversationId}`);
+    return stored ? new Date(stored) : new Date(0);
+  };
+
+  const loadNotifications = useCallback(async () => {
+    if (!user?.id) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const token = await getToken();
+      const response = await getUserConversations(user.id, token);
+      const summaries = await Promise.all(
+        (response.data as any[])
+          .filter((item) => item.notificationsEnabled)
+          .map(async (item) => {
+            const conversationId = item.conversation.id;
+            if (!conversationId) return null;
+
+            const latestMessage = item.conversation.messages?.[0];
+            if (!latestMessage?.createdAt) return null;
+
+            const lastReadDate = getLastReadDate(conversationId);
+            const latestMessageDate = new Date(latestMessage.createdAt);
+            if (latestMessageDate <= lastReadDate) return null;
+
+            const messageResponse = await getConversationMessages(conversationId, token);
+            const unreadCount = (messageResponse.data as any[]).filter(
+              (message) =>
+                message.createdAt &&
+                new Date(message.createdAt) > lastReadDate &&
+                message.sender?.id !== user.id,
+            ).length;
+
+            if (unreadCount === 0) return null;
+
+            return {
+              conversationId,
+              conversationName: getConversationTitle(item.conversation),
+              unreadCount,
+              latestAt: latestMessage.createdAt,
+            };
+          }),
+      );
+
+      setNotifications(
+        summaries
+          .filter((summary): summary is NotificationSummary => Boolean(summary))
+          .sort((a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime()),
+      );
+    } catch (fetchError) {
+      console.error("Failed to load notifications", fetchError);
+      setError("Unable to fetch notifications. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [getToken, user?.id]);
+
+  useEffect(() => {
+    const load = async () => {
+      await loadNotifications();
+    };
+
+    void load();
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const load = async () => {
+      await loadNotifications();
+    };
+
+    void load();
+  }, [open, loadNotifications]);
+
+  useEffect(() => {
+    if (open) return;
+
+    const handleRead = () => {
+      void loadNotifications();
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key?.startsWith("chatApp:conversation:read:")) {
+        handleRead();
+      }
+    };
+
+    window.addEventListener("conversationRead", handleRead);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("conversationRead", handleRead);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, [loadNotifications, open]);
 
   return (
     <div style={{ display: "inline-block" }}>
       <button
-        className="app-icon"
+        className="app-icon notification-bell"
         aria-label="Notifications"
         onClick={() => setOpen((v) => !v)}
         type="button"
       >
         🔔
       </button>
+      {notifications.length > 0 && <span className="notification-bell__indicator" aria-hidden="true" />}
       {open && (
         <div style={{ position: "absolute", right: 0, top: 44, zIndex: 60 }}>
-          <NotificationsModal onClose={() => setOpen(false)} />
+          <NotificationsModal
+            notifications={notifications}
+            loading={loading}
+            error={error}
+            onClose={() => setOpen(false)}
+            onConversationClick={(conversationId) => {
+              setOpen(false);
+              navigate(`/app/chat/${conversationId}`);
+            }}
+          />
         </div>
       )}
     </div>

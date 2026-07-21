@@ -52,6 +52,13 @@ const Groups = () => {
   const [groupSearch, setGroupSearch] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem("chatApp:activeGroupId");
+    } catch {
+      return null;
+    }
+  });
   const [isCreating, setIsCreating] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [convCollapsed, setConvCollapsed] = useState<boolean>(() => {
@@ -518,7 +525,8 @@ const Groups = () => {
                 : `${(g.conversation.members ?? []).length} members`;
               const time = formatRelativeTime(lastMessage?.createdAt);
               const isActive =
-                location.pathname === `/app/groups/${g.conversation.id}`;
+                location.pathname === `/app/groups/${g.conversation.id}` ||
+                activeGroupId === g.conversation.id;
               const lastReadAt = localStorage.getItem(
                 `chatApp:conversation:read:${g.conversation.id}`,
               )
@@ -542,6 +550,14 @@ const Groups = () => {
                     to={`/app/groups/${g.conversation.id}`}
                     className={`conversation-list__item${isActive ? " conversation-list__item--active" : ""}`}
                     style={{ position: "relative" }}
+                    onClick={() => {
+                      setActiveGroupId(g.conversation.id);
+                      try {
+                        localStorage.setItem("chatApp:activeGroupId", g.conversation.id);
+                      } catch {
+                        // ignore
+                      }
+                    }}
                   >
                     <div className="conversation-list__avatar">
                       <span>{title.slice(0, 1).toUpperCase()}</span>

@@ -43,6 +43,19 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.notification-bell__indicator {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #ef4444;
+  border: 2px solid #071026;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.25);
+  pointer-events: none;
+}
+
 .app-content {
   display: grid;
   grid-template-columns: 260px 520px minmax(0, 1fr);

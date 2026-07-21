@@ -36,6 +36,8 @@ const Sidebar = ({
             item.to === "/app/conversations"
               ? location.pathname.startsWith("/app/conversations") ||
                 location.pathname.startsWith("/app/chat")
+              : item.to === "/app/groups"
+              ? location.pathname.startsWith("/app/groups")
               : location.pathname === item.to;
 
           return (
