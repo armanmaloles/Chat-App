@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, useCallback, type KeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import {
@@ -42,8 +42,6 @@ type UserListProps = {
   showActions?: boolean;
 };
 
-const REFRESH_INTERVAL_MS = 10000; // Reduced from 30000 to 10 seconds
-
 const UserList = ({ conversationId, showActions = false }: UserListProps) => {
   const [users, setUsers] = useState<UserItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,51 +51,52 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
   const { user } = useUser();
   const navigate = useNavigate();
 
+  const loadUsers = useCallback(async () => {
+    if (loadingTimerRef.current) {
+      window.clearTimeout(loadingTimerRef.current);
+    }
+
+    setIsLoading(true);
+    const startTime = Date.now();
+
+    try {
+      const token = await getToken();
+      if (conversationId) {
+        const response = await getConversationMembers(conversationId, token);
+        const members = (response.data as MemberEntry[]).map((entry) => ({
+          id: entry.user?.id ?? "",
+          name: entry.user?.name || entry.user?.email || "Unknown user",
+        }));
+        setUsers(members.filter((member) => member.id));
+      } else {
+        const response = await getUsers(token);
+        const allUsers = (response.data as UserItem[])
+          .map((userData) => ({
+            id: userData.id,
+            name: userData.name || userData.id,
+            email: userData.email,
+            imageUrl: userData.imageUrl,
+            isActive: Boolean(userData.isActive),
+          }))
+          .filter((userData) => userData.id !== user?.id);
+        setUsers(allUsers);
+      }
+    } catch (error) {
+      console.error("Failed to load users", error);
+    } finally {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(500 - elapsed, 0);
+      loadingTimerRef.current = window.setTimeout(() => {
+        setIsLoading(false);
+        loadingTimerRef.current = null;
+      }, remaining);
+    }
+  }, [conversationId, getToken, user?.id]);
+
   useEffect(() => {
-    const loadUsers = async () => {
-      if (loadingTimerRef.current) {
-        window.clearTimeout(loadingTimerRef.current);
-      }
-
-      setIsLoading(true);
-      const startTime = Date.now();
-
-      try {
-        const token = await getToken();
-        if (conversationId) {
-          const response = await getConversationMembers(conversationId, token);
-          const members = (response.data as MemberEntry[]).map((entry) => ({
-            id: entry.user?.id ?? "",
-            name: entry.user?.name || entry.user?.email || "Unknown user",
-          }));
-          setUsers(members.filter((member) => member.id));
-        } else {
-          const response = await getUsers(token);
-          const allUsers = (response.data as UserItem[])
-            .map((userData) => ({
-              id: userData.id,
-              name: userData.name || userData.id,
-              email: userData.email,
-              imageUrl: userData.imageUrl,
-              isActive: Boolean(userData.isActive),
-            }))
-            .filter((userData) => userData.id !== user?.id);
-          setUsers(allUsers);
-        }
-      } catch (error) {
-        console.error("Failed to load users", error);
-      } finally {
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(500 - elapsed, 0);
-        loadingTimerRef.current = window.setTimeout(() => {
-          setIsLoading(false);
-          loadingTimerRef.current = null;
-        }, remaining);
-      }
-    };
-
-    void loadUsers();
-    const intervalId = window.setInterval(() => void loadUsers(), REFRESH_INTERVAL_MS);
+    const timerId = window.setTimeout(() => {
+      void loadUsers();
+    }, 0);
 
     // Listen for visibility changes to refresh immediately when tab becomes visible
     const handleVisibilityChange = () => {
@@ -109,13 +108,13 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
     window.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.clearInterval(intervalId);
+      window.clearTimeout(timerId);
       window.removeEventListener("visibilitychange", handleVisibilityChange);
       if (loadingTimerRef.current) {
         window.clearTimeout(loadingTimerRef.current);
       }
     };
-  }, [conversationId, getToken, user?.id]);
+  }, [loadUsers]);
 
   const handleStartChat = async (userId: string) => {
     if (!user?.id || conversationId) return;
@@ -139,6 +138,18 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
       });
 
       if (existingConversation?.conversation?.id) {
+        try {
+          localStorage.removeItem("chatApp:activeGroupId");
+        } catch {
+          // ignore
+        }
+        try {
+          window.dispatchEvent(
+            new CustomEvent("activeGroupChanged", { detail: { activeGroupId: null } }),
+          );
+        } catch {
+          // ignore
+        }
         navigate(`/app/chat/${existingConversation.conversation.id}`);
         return;
       }
@@ -154,6 +165,18 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
       const conversationId = response.data.id;
       await addConversationMember(conversationId, user.id, token);
       await addConversationMember(conversationId, userId, token);
+      try {
+        localStorage.removeItem("chatApp:activeGroupId");
+      } catch {
+        // ignore
+      }
+      try {
+        window.dispatchEvent(
+          new CustomEvent("activeGroupChanged", { detail: { activeGroupId: null } }),
+        );
+      } catch {
+        // ignore
+      }
       navigate(`/app/chat/${conversationId}`);
     } catch (error) {
       console.error("Failed to start chat", error);
@@ -179,9 +202,16 @@ const UserList = ({ conversationId, showActions = false }: UserListProps) => {
       <div className="user-list__header">
         <h3 className="user-list__title">{title}</h3>
         {!conversationId && (
-          <span className="user-list__refresh-note">
-            Refreshes every {REFRESH_INTERVAL_MS / 1000} seconds
-          </span>
+          <button
+            type="button"
+            className="user-list__refresh-button"
+            onClick={() => void loadUsers()}
+            disabled={isLoading}
+            aria-label="Refresh users"
+          >
+            <span className="user-list__refresh-icon" aria-hidden="true">⟳</span>
+            Refresh
+          </button>
         )}
       </div>
       {!conversationId && (

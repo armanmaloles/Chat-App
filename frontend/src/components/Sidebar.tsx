@@ -44,6 +44,22 @@ const Sidebar = ({
             <NavLink
               key={item.to}
               to={item.to}
+              onClick={() => {
+                if (item.to === "/app/conversations") {
+                  try {
+                    localStorage.removeItem("chatApp:activeGroupId");
+                  } catch {
+                    // ignore
+                  }
+                  try {
+                    window.dispatchEvent(
+                      new CustomEvent("activeGroupChanged", { detail: { activeGroupId: null } }),
+                    );
+                  } catch {
+                    // ignore
+                  }
+                }
+              }}
               className={() =>
                 `sidebar__nav-item ${itemActive ? "active" : ""}`
               }

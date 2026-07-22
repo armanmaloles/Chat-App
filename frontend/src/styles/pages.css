@@ -285,7 +285,7 @@
   width: min(640px, 100%);
   max-height: 85vh;
   overflow: auto;
-  background: #0f1724;
+  background: #141414;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
@@ -437,4 +437,70 @@
 
 .page--notifications .conversation-list__empty {
   margin-top: 20px;
+}
+
+@media (max-width: 900px) {
+  .page--chat-room .chat-room__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .chat-room__settings-button {
+    align-self: flex-start;
+  }
+
+  .chat-room__settings-panel {
+    width: min(100%, 92vw);
+    padding: 20px;
+  }
+
+  .chat-room__settings-panel-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .chat-room__settings-row,
+  .chat-room__section-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chat-room__search-input {
+    max-width: 100%;
+  }
+
+  .chat-room__member-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .chat-room__action-footer {
+    justify-content: stretch;
+  }
+
+  .page--settings .settings-section {
+    max-width: 100%;
+    margin-left: 0;
+  }
+
+  .settings-toggle-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .profile-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .profile-avatar {
+    margin: 0 auto;
+  }
+
+  .profile-detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

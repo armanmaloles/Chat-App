@@ -6,10 +6,11 @@ html,
 body,
 #root {
   margin: 0;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
   font-family: Inter, system-ui, sans-serif;
-  background: #0f172a;
+  background: #121212;
   color: #e2e8f0;
 }
 
@@ -59,7 +60,7 @@ a {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a 0%, #1a1f35 100%);
+  background: linear-gradient(135deg, #121212 0%, #1b1b25 100%);
   color: #e2e8f0;
 }
 

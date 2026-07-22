@@ -262,6 +262,12 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
     }
   }, [messages.length]);
 
+  useEffect(() => {
+    if (conversationId) {
+      requestAnimationFrame(() => scrollToBottom());
+    }
+  }, [conversationId, currentPendingAttachments.length]);
+
   const updateTypingStatus = async (typing: boolean) => {
     if (!conversationId || !user?.id) return;
 

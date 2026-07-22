@@ -1,6 +1,6 @@
 .sidebar {
-  background: #111827;
-  border-right: 1px solid #1f2937;
+  background: #141414;
+  border-right: 1px solid #1e1e24;
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -51,6 +51,41 @@
 
 .sidebar--collapsed  {
   gap: 6px;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    padding: 18px;
+  }
+
+  .sidebar__toggle-wrapper {
+    justify-content: flex-end;
+  }
+
+  .sidebar__nav-item {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .sidebar__toggle-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sidebar__nav-item {
+    min-height: 48px;
+  }
+
+  .sidebar__nav-label {
+    font-size: 0.95rem;
+  }
 }
 
 .sidebar__nav {

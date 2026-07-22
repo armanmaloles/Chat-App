@@ -8,13 +8,54 @@ import { useAuth, useUser } from "@clerk/clerk-react";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import NotificationsModal from "../components/NotificationsModal";
-import { getUserConversations, getConversationMessages, heartbeatUser, clearHeartbeatUser, getUser as getUserApi } from "../lib/api";
+import {
+  getUserConversations,
+  getConversationMessages,
+  heartbeatUser,
+  clearHeartbeatUser,
+  getUser as getUserApi,
+} from "../lib/api";
 
 type NotificationSummary = {
   conversationId: string;
   conversationName: string;
   unreadCount: number;
   latestAt: string;
+  isGroup?: boolean;
+  otherMemberId?: string;
+  otherMemberName?: string | null;
+  otherMemberImage?: string | null;
+};
+
+type ConversationMember = {
+  user?: {
+    id?: string;
+    name?: string | null;
+    email?: string | null;
+    imageUrl?: string | null;
+  };
+};
+
+type ConversationMessage = {
+  content: string;
+  createdAt?: string;
+  sender?: {
+    id?: string;
+    name?: string | null;
+  };
+};
+
+type Conversation = {
+  id: string;
+  name?: string | null;
+  isGroup?: boolean;
+  members?: ConversationMember[];
+  messages?: ConversationMessage[];
+};
+
+type UserConversationItem = {
+  conversation: Conversation;
+  notificationsEnabled: boolean;
 };
 
 function NotificationBell() {
@@ -26,20 +67,25 @@ function NotificationBell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getConversationTitle = useCallback((conversation: any) => {
-    if (conversation.isGroup) {
-      return conversation.name || "Group chat";
-    }
+  const getConversationTitle = useCallback(
+    (conversation: Conversation) => {
+      if (conversation.isGroup) {
+        return conversation.name || "Group chat";
+      }
 
-    const otherMember = conversation.members?.find(
-      (member: any) => member.user?.id !== user?.id,
-    )?.user;
+      const otherMember = conversation.members?.find(
+        (member: ConversationMember) => member.user?.id !== user?.id,
+      )?.user;
 
-    return otherMember?.name || otherMember?.email || "Conversation";
-  }, [user?.id]);
+      return otherMember?.name || otherMember?.email || "Conversation";
+    },
+    [user?.id],
+  );
 
   const getLastReadDate = (conversationId: string) => {
-    const stored = localStorage.getItem(`chatApp:conversation:read:${conversationId}`);
+    const stored = localStorage.getItem(
+      `chatApp:conversation:read:${conversationId}`,
+    );
     return stored ? new Date(stored) : new Date(0);
   };
 
@@ -57,7 +103,7 @@ function NotificationBell() {
       const token = await getToken();
       const response = await getUserConversations(user.id, token);
       const summaries = await Promise.all(
-        (response.data as any[])
+        (response.data as UserConversationItem[])
           .filter((item) => item.notificationsEnabled)
           .map(async (item) => {
             const conversationId = item.conversation.id;
@@ -70,8 +116,11 @@ function NotificationBell() {
             const latestMessageDate = new Date(latestMessage.createdAt);
             if (latestMessageDate <= lastReadDate) return null;
 
-            const messageResponse = await getConversationMessages(conversationId, token);
-            const unreadCount = (messageResponse.data as any[]).filter(
+            const messageResponse = await getConversationMessages(
+              conversationId,
+              token,
+            );
+            const unreadCount = (messageResponse.data as ConversationMessage[]).filter(
               (message) =>
                 message.createdAt &&
                 new Date(message.createdAt) > lastReadDate &&
@@ -80,27 +129,47 @@ function NotificationBell() {
 
             if (unreadCount === 0) return null;
 
+            const isGroup = Boolean(item.conversation?.isGroup);
+            let otherMemberId: string | undefined;
+            let otherMemberName: string | null | undefined;
+            let otherMemberImage: string | null | undefined;
+
+            if (!isGroup) {
+              const other = item.conversation.members?.find(
+                (m: ConversationMember) => m.user?.id !== user?.id,
+              )?.user;
+              if (other) {
+                otherMemberId = other.id;
+                otherMemberName = other.name ?? other.email ?? null;
+                otherMemberImage = other.imageUrl ?? null;
+              }
+            }
+
             return {
               conversationId,
               conversationName: getConversationTitle(item.conversation),
               unreadCount,
               latestAt: latestMessage.createdAt,
+              isGroup,
+              otherMemberId,
+              otherMemberName,
+              otherMemberImage,
             };
           }),
       );
 
-      setNotifications(
-        summaries
-          .filter((summary): summary is NotificationSummary => Boolean(summary))
-          .sort((a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime()),
+      const filteredSummaries = (summaries.filter(Boolean) as NotificationSummary[]);
+      filteredSummaries.sort(
+        (a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime(),
       );
+      setNotifications(filteredSummaries);
     } catch (fetchError) {
       console.error("Failed to load notifications", fetchError);
       setError("Unable to fetch notifications. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, [getToken, user?.id]);
+  }, [getToken, user?.id, getConversationTitle]);
 
   useEffect(() => {
     const load = async () => {
@@ -142,17 +211,30 @@ function NotificationBell() {
     };
   }, [loadNotifications, open]);
 
+  const handleNotificationBellClick = () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+
+    setOpen(true);
+  };
+
   return (
     <div style={{ display: "inline-block" }}>
       <button
-        className="app-icon notification-bell"
+        className={`app-icon notification-bell${open ? " notification-bell--open" : ""}`}
         aria-label="Notifications"
-        onClick={() => setOpen((v) => !v)}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onClick={handleNotificationBellClick}
         type="button"
       >
         🔔
       </button>
-      {notifications.length > 0 && <span className="notification-bell__indicator" aria-hidden="true" />}
+      {notifications.length > 0 && (
+        <span className="notification-bell__indicator" aria-hidden="true" />
+      )}
       {open && (
         <div style={{ position: "absolute", right: 0, top: 44, zIndex: 60 }}>
           <NotificationsModal
@@ -160,8 +242,45 @@ function NotificationBell() {
             loading={loading}
             error={error}
             onClose={() => setOpen(false)}
-            onConversationClick={(conversationId) => {
+            onRefresh={() => {
+              void loadNotifications();
+            }}
+            onConversationClick={(conversationId, isGroup) => {
               setOpen(false);
+              if (isGroup) {
+                try {
+                  localStorage.setItem("chatApp:activeGroupId", conversationId);
+                } catch {
+                  // ignore
+                }
+                // notify other components in this window that active group changed
+                try {
+                  window.dispatchEvent(
+                    new CustomEvent("activeGroupChanged", {
+                      detail: { activeGroupId: conversationId },
+                    }),
+                  );
+                } catch {
+                  // ignore
+                }
+                navigate(`/app/groups/${conversationId}`);
+                return;
+              }
+
+              try {
+                localStorage.removeItem("chatApp:activeGroupId");
+              } catch {
+                // ignore
+              }
+              try {
+                window.dispatchEvent(
+                  new CustomEvent("activeGroupChanged", {
+                    detail: { activeGroupId: null },
+                  }),
+                );
+              } catch {
+                // ignore
+              }
               navigate(`/app/chat/${conversationId}`);
             }}
           />
@@ -184,20 +303,26 @@ const ChatLayout = () => {
       return false;
     }
   });
-  const [conversationCollapsed, setConversationCollapsed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("chatApp:conversationListCollapsed") === "1";
-    } catch {
-      return false;
-    }
-  });
-  const [activeStatusEnabled, setActiveStatusEnabled] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("chatApp:activeStatusEnabled") !== "0";
-    } catch {
-      return true;
-    }
-  });
+  const [conversationCollapsed, setConversationCollapsed] = useState<boolean>(
+    () => {
+      try {
+        return (
+          localStorage.getItem("chatApp:conversationListCollapsed") === "1"
+        );
+      } catch {
+        return false;
+      }
+    },
+  );
+  const [activeStatusEnabled, setActiveStatusEnabled] = useState<boolean>(
+    () => {
+      try {
+        return localStorage.getItem("chatApp:activeStatusEnabled") !== "0";
+      } catch {
+        return true;
+      }
+    },
+  );
 
   useEffect(() => {
     try {
@@ -228,7 +353,11 @@ const ChatLayout = () => {
   useEffect(() => {
     const handler = () => toggleConversationCollapsed();
     window.addEventListener("toggleConversationList", handler as EventListener);
-    return () => window.removeEventListener("toggleConversationList", handler as EventListener);
+    return () =>
+      window.removeEventListener(
+        "toggleConversationList",
+        handler as EventListener,
+      );
   }, []);
 
   useEffect(() => {
@@ -237,8 +366,15 @@ const ChatLayout = () => {
       setActiveStatusEnabled(customEvent.detail.enabled);
     };
 
-    window.addEventListener("activeStatusPreferenceChanged", preferenceHandler as EventListener);
-    return () => window.removeEventListener("activeStatusPreferenceChanged", preferenceHandler as EventListener);
+    window.addEventListener(
+      "activeStatusPreferenceChanged",
+      preferenceHandler as EventListener,
+    );
+    return () =>
+      window.removeEventListener(
+        "activeStatusPreferenceChanged",
+        preferenceHandler as EventListener,
+      );
   }, []);
 
   useEffect(() => {
@@ -256,7 +392,10 @@ const ChatLayout = () => {
         if (typeof enabled === "boolean") {
           setActiveStatusEnabled(enabled);
           try {
-            localStorage.setItem("chatApp:activeStatusEnabled", enabled ? "1" : "0");
+            localStorage.setItem(
+              "chatApp:activeStatusEnabled",
+              enabled ? "1" : "0",
+            );
           } catch {
             /* ignore */
           }
@@ -301,7 +440,9 @@ const ChatLayout = () => {
   const hideChatOnSettings = path.startsWith("/app/settings");
   // When viewing Settings, ignore the conversation list collapsed state
   // so the Settings view remains static and unaffected by collapsing.
-  const conversationCollapsedEffective = hideChatOnSettings ? false : conversationCollapsed;
+  const conversationCollapsedEffective = hideChatOnSettings
+    ? false
+    : conversationCollapsed;
   let content;
   if (path.startsWith("/app/groups")) {
     content = <Groups />;
@@ -348,7 +489,10 @@ const ChatLayout = () => {
             {showChatPlaceholder ? (
               <div className="app-chat__empty">
                 <h2>Select a conversation</h2>
-                <p>Choose a chat from the list to start messaging. Your selected conversation will appear here.</p>
+                <p>
+                  Choose a chat from the list to start messaging. Your selected
+                  conversation will appear here.
+                </p>
               </div>
             ) : (
               <Outlet />

@@ -302,6 +302,20 @@ const ConversationList = ({
                           key={entry.conversation.id}
                           to={`/app/chat/${entry.conversation.id}`}
                           className={`conversation-list__item${selectedConversationId === entry.conversation.id ? " conversation-list__item--active" : ""}`}
+                          onClick={() => {
+                            try {
+                              localStorage.removeItem("chatApp:activeGroupId");
+                            } catch {
+                              // ignore
+                            }
+                            try {
+                              window.dispatchEvent(
+                                new CustomEvent("activeGroupChanged", { detail: { activeGroupId: null } }),
+                              );
+                            } catch {
+                              // ignore
+                            }
+                          }}
                         >
                           <div className="conversation-list__avatar">
                             {otherUser?.imageUrl ? (
@@ -388,6 +402,20 @@ const ConversationList = ({
                     to={`/app/chat/${entry.conversation.id}`}
                     className={`conversation-list__collapsed-item${isActive ? " conversation-list__collapsed-item--active" : ""}`}
                     title={title}
+                    onClick={() => {
+                      try {
+                        localStorage.removeItem("chatApp:activeGroupId");
+                      } catch {
+                        // ignore
+                      }
+                      try {
+                        window.dispatchEvent(
+                          new CustomEvent("activeGroupChanged", { detail: { activeGroupId: null } }),
+                        );
+                      } catch {
+                        // ignore
+                      }
+                    }}
                   >
                     <div className="conversation-list__collapsed-avatar-sm">
                       {otherUser?.imageUrl ? (

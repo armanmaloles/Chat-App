@@ -15,11 +15,100 @@
   display: none;
 }
 
+@media (max-width: 1100px) {
+  .page--conversation-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page--conversation-list--collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .conversation-list__sidebar {
+    width: 100%;
+    padding-right: 0;
+  }
+
+  .conversation-list__sidebar-content {
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 800px) {
+  .conversation-list__item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .conversation-list__details {
+    width: 100%;
+  }
+
+  .conversation-list__meta {
+    align-items: flex-start;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .conversation-list__avatar {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+  }
+
+  .conversation-list__item {
+    padding: 14px 16px;
+  }
+
+  .conversation-list__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .conversation-list__toggle {
+    align-self: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  .conversation-list__sidebar {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .conversation-list__toggle {
+    width: 100%;
+  }
+
+  .conversation-list__collapsed-chats {
+    max-height: calc(100vh - 250px);
+  }
+
+  .conversation-list__item {
+    padding: 12px 14px;
+  }
+
+  .conversation-list__meta {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .conversation-list__time {
+    order: 2;
+  }
+
+  .conversation-list__badge {
+    order: 1;
+  }
+}
+
 .conversation-list__sidebar {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: #0f172a;
+  background: #121212;
   border-radius: 24px;
   padding: 16px;
   min-height: 0;
@@ -58,7 +147,7 @@
   display: flex;
   flex-direction: column;
   margin-left: 10px;
-  background: #0f172a;
+  background: #121212;
 }
 
 .page--groups .conversation-list--scroll {
@@ -106,7 +195,7 @@
   height: 40px;
   width: 40px;
   border-radius: 14px;
-  background: #111827;
+  background: #17171f;
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: #e2e8f0;
   cursor: pointer;
@@ -179,7 +268,7 @@
 .page--groups.page--groups--collapsed .page--groups__header {
   flex-direction: column;
   align-items: center;
-  margin: 0 0 0 15px;
+  margin: 0 0 0 10px;
 }
 
 .page--groups.page--groups--collapsed .page--groups__right {
@@ -251,6 +340,22 @@
   display: grid;
   place-items: center;
   font-size: 1rem;
+  border: 1px solid #141414;
+}
+
+/* Ensure unread badge is visible and positioned correctly in collapsed groups view */
+.app-content--conversation-collapsed .page--groups .conversation-list__badge--avatar,
+.page--groups.page--groups--collapsed .conversation-list__badge--avatar {
+  display: block;
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 2px solid #0f172a;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.45);
+  z-index: 3;
 }
 
 .conversation-list__collapsed-preview {
@@ -315,7 +420,7 @@
   width: 100%;
   height: 64px;
   border-radius: 18px;
-  background: #111827;
+  background: #17171f;
   text-decoration: none;
   position: relative;
   transition: background 200ms ease, transform 180ms ease, border-color 180ms ease;
@@ -482,7 +587,7 @@
   letter-spacing: 0.02em;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #2563eb, #0f172a);
+  background: linear-gradient(135deg, #2563eb, #141414);
   overflow: visible;
   position: relative;
 }
@@ -492,12 +597,13 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 50%;
 }
 
 .conversation-list__badge--avatar {
   position: absolute;
-  top: -2px;
-  right: -2px;
+  top: -5px;
+  right: -5px;
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -505,7 +611,8 @@
   border: 2px solid rgba(15, 23, 42, 0.9);
   box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.45);
   z-index: 2;
-  display: none;
+  display: none; /* hide unread badge in expanded view; show in collapsed via override below */
+  overflow: visible;
 }
 
 .app-content--conversation-collapsed .page--groups .conversation-list__badge--avatar,

@@ -182,6 +182,35 @@ const Groups = () => {
     };
   }, [getToken, user?.id]);
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ activeGroupId: string | null }>;
+      try {
+        setActiveGroupId(customEvent.detail.activeGroupId ?? null);
+      } catch {
+        // ignore
+      }
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "chatApp:activeGroupId") {
+        try {
+          setActiveGroupId(event.newValue);
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    window.addEventListener("activeGroupChanged", handler as EventListener);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("activeGroupChanged", handler as EventListener);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
+
   const toggle = (id: string) => {
     setSelected((s) => ({ ...s, [id]: !s[id] }));
   };
@@ -291,7 +320,7 @@ const Groups = () => {
             aria-expanded={!convCollapsed}
             aria-label={convCollapsed ? "Expand" : "Collapse"}
             title={convCollapsed ? "Expand" : "Collapse"}
-            style={{ marginTop : 17, marginLeft: 10 }}
+            style={{ marginTop : 17, marginLeft: 15 }}
           > 
             {convCollapsed ? "›" : "‹"}
           </button>
