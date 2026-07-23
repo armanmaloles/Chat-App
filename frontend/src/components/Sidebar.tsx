@@ -9,25 +9,42 @@ const navItems = [
 const Sidebar = ({
   collapsed,
   onToggle,
+  onNavigate,
+  onClose,
+  isOverlay,
 }: {
   collapsed: boolean;
   onToggle: () => void;
+  onNavigate?: () => void;
+  onClose?: () => void;
+  isOverlay?: boolean;
 }) => {
   const location = useLocation();
 
   return (
     <div className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}>
       <div className="sidebar__toggle-wrapper">
-        <button
-          type="button"
-          className="sidebar__toggle-btn"
-          onClick={onToggle}
-          aria-expanded={!collapsed}
-          aria-label={collapsed ? "Expand" : "Collapse"}
-          title={collapsed ? "Expand" : "Collapse"}
-        >
-          {collapsed ? "›" : "‹"}
-        </button>
+        {isOverlay ? (
+          <button
+            type="button"
+            className="sidebar__close-btn"
+            onClick={onClose}
+            aria-label="Close menu"
+          >
+            ×
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="sidebar__toggle-btn"
+            onClick={onToggle}
+            aria-expanded={!collapsed}
+            aria-label={collapsed ? "Expand" : "Collapse"}
+            title={collapsed ? "Expand" : "Collapse"}
+          >
+            {collapsed ? "›" : "‹"}
+          </button>
+        )}
       </div>
 
       <nav className="sidebar__nav">
@@ -58,6 +75,9 @@ const Sidebar = ({
                   } catch {
                     // ignore
                   }
+                }
+                if (onNavigate) {
+                  onNavigate();
                 }
               }}
               className={() =>

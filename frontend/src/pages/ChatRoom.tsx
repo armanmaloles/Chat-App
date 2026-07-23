@@ -330,9 +330,13 @@ const ChatRoom = () => {
             <div className="chat-room__settings-panel-header">
               <div>
                 <h2 className="chat-room__section-title">Conversation settings</h2>
-                <p className="chat-room__section-description">
-                  {members.length} member{members.length === 1 ? "" : "s"}
-                </p>
+                {isGroup ? (
+                  <p className="chat-room__section-description">
+                    {members.length} member{members.length === 1 ? "" : "s"}
+                  </p>
+                ) : (
+                  <p className="chat-room__section-description">Private conversation</p>
+                )}
               </div>
               <button
                 type="button"

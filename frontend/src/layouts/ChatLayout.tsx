@@ -202,12 +202,26 @@ function NotificationBell() {
       }
     };
 
+    const handleConversationUpdate = () => {
+      void loadNotifications();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void loadNotifications();
+      }
+    };
+
     window.addEventListener("conversationRead", handleRead);
     window.addEventListener("storage", handleStorage);
+    window.addEventListener("conversationUpdated", handleConversationUpdate);
+    window.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("conversationRead", handleRead);
       window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("conversationUpdated", handleConversationUpdate);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [loadNotifications, open]);
 
@@ -303,6 +317,9 @@ const ChatLayout = () => {
       return false;
     }
   });
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showMobileChat, setShowMobileChat] = useState(false);
   const [conversationCollapsed, setConversationCollapsed] = useState<boolean>(
     () => {
       try {
@@ -347,6 +364,8 @@ const ChatLayout = () => {
   }, [conversationCollapsed]);
 
   const toggleSidebar = () => setSidebarCollapsed((value) => !value);
+  const toggleMobileSidebar = () => setMobileSidebarOpen((value) => !value);
+  const closeMobileSidebar = () => setMobileSidebarOpen(false);
   const toggleConversationCollapsed = () =>
     setConversationCollapsed((value) => !value);
 
@@ -380,6 +399,34 @@ const ChatLayout = () => {
   useEffect(() => {
     if (!isSignedIn) navigate("/");
   }, [isSignedIn, navigate]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 640);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setShowMobileChat(false);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setShowMobileChat(false);
+      return;
+    }
+
+    setShowMobileChat(
+      path.startsWith("/app/chat/") ||
+        (path.startsWith("/app/groups/") && path !== "/app/groups"),
+    );
+  }, [isMobile, path]);
 
   useEffect(() => {
     const loadActiveStatusPreference = async () => {
@@ -438,11 +485,17 @@ const ChatLayout = () => {
     (path.startsWith("/app/groups/") && path !== "/app/groups")
   );
   const hideChatOnSettings = path.startsWith("/app/settings");
+
   // When viewing Settings, ignore the conversation list collapsed state
   // so the Settings view remains static and unaffected by collapsing.
   const conversationCollapsedEffective = hideChatOnSettings
     ? false
     : conversationCollapsed;
+
+  const mobileChatView =
+    isMobile &&
+    (path.startsWith("/app/chat/") ||
+      (path.startsWith("/app/groups/") && path !== "/app/groups"));
   let content;
   if (path.startsWith("/app/groups")) {
     content = <Groups />;
@@ -463,9 +516,31 @@ const ChatLayout = () => {
     <div className="app-root">
       <header className="app-navbar">
         <div className="app-navbar__left">
-          <Link to="/app/conversations" className="app-logo">
-            💬 Chat App
-          </Link>
+          {showMobileChat ? (
+            <button
+              type="button"
+              className="app-navbar__menu-btn app-navbar__back-btn"
+              onClick={() => navigate("/app/conversations")}
+              aria-label="Back to list"
+            >
+              ←
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="app-navbar__menu-btn"
+                onClick={toggleMobileSidebar}
+                aria-label="Open menu"
+                aria-expanded={mobileSidebarOpen}
+              >
+                ☰
+              </button>
+              <Link to="/app/conversations" className="app-logo">
+                💬 Chat App
+              </Link>
+            </>
+          )}
         </div>
 
         <div className="app-navbar__right">
@@ -475,17 +550,35 @@ const ChatLayout = () => {
         </div>
       </header>
 
+      {mobileSidebarOpen && (
+        <>
+          <div className="app-sidebar-backdrop" onClick={closeMobileSidebar} />
+          <aside className="app-sidebar app-sidebar--overlay">
+            <Sidebar
+              collapsed={false}
+              onToggle={toggleSidebar}
+              onNavigate={closeMobileSidebar}
+              onClose={closeMobileSidebar}
+              isOverlay={true}
+            />
+          </aside>
+        </>
+      )}
+
       <div
-        className={`app-content${sidebarCollapsed ? " app-content--sidebar-collapsed" : ""}${conversationCollapsedEffective ? " app-content--conversation-collapsed" : ""}`}
+        className={`app-content${sidebarCollapsed ? " app-content--sidebar-collapsed" : ""}${conversationCollapsedEffective ? " app-content--conversation-collapsed" : ""}${showMobileChat ? " app-content--mobile-chat" : ""}`}
       >
-        <aside className="app-sidebar">
-          <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
-        </aside>
+        {!showMobileChat && (
+          <>
+            <aside className="app-sidebar">
+              <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+            </aside>
+            <section className="app-conversations">{content}</section>
+          </>
+        )}
 
-        <section className="app-conversations">{content}</section>
-
-        {!hideChatOnSettings && (
-          <section className="app-chat">
+        {!hideChatOnSettings && (!isMobile || showMobileChat) && (
+          <section className={`app-chat${showMobileChat ? " app-chat--mobile-full" : ""}`}>
             {showChatPlaceholder ? (
               <div className="app-chat__empty">
                 <h2>Select a conversation</h2>

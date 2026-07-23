@@ -78,17 +78,6 @@
   width: fit-content;
   align-self: flex-start;
 }
-@media (max-width: 900px) {
-  .chat-window__messages {
-    max-height: calc(100vh - 280px);
-  }
-
-  .chat-window__footer {
-    min-height: auto;
-    padding: 0;
-  }
-}
-
 @media (max-width: 640px) {
   .chat-window__messages {
     max-height: calc(100vh - 240px);
