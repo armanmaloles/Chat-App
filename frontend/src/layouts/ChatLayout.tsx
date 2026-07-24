@@ -319,7 +319,6 @@ const ChatLayout = () => {
   });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [showMobileChat, setShowMobileChat] = useState(false);
   const [conversationCollapsed, setConversationCollapsed] = useState<boolean>(
     () => {
       try {
@@ -402,7 +401,7 @@ const ChatLayout = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 640);
+      setIsMobile(window.innerWidth <= 767);
     };
 
     handleResize();
@@ -410,23 +409,10 @@ const ChatLayout = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    if (!isMobile) {
-      setShowMobileChat(false);
-    }
-  }, [isMobile]);
-
-  useEffect(() => {
-    if (!isMobile) {
-      setShowMobileChat(false);
-      return;
-    }
-
-    setShowMobileChat(
-      path.startsWith("/app/chat/") ||
-        (path.startsWith("/app/groups/") && path !== "/app/groups"),
-    );
-  }, [isMobile, path]);
+  const showMobileChat =
+    isMobile &&
+    (path.startsWith("/app/chat/") ||
+      (path.startsWith("/app/groups/") && path !== "/app/groups"));
 
   useEffect(() => {
     const loadActiveStatusPreference = async () => {
@@ -485,6 +471,9 @@ const ChatLayout = () => {
     (path.startsWith("/app/groups/") && path !== "/app/groups")
   );
   const hideChatOnSettings = path.startsWith("/app/settings");
+  const mobileBackPath = path.startsWith("/app/groups/")
+    ? "/app/groups"
+    : "/app/conversations";
 
   // When viewing Settings, ignore the conversation list collapsed state
   // so the Settings view remains static and unaffected by collapsing.
@@ -492,10 +481,6 @@ const ChatLayout = () => {
     ? false
     : conversationCollapsed;
 
-  const mobileChatView =
-    isMobile &&
-    (path.startsWith("/app/chat/") ||
-      (path.startsWith("/app/groups/") && path !== "/app/groups"));
   let content;
   if (path.startsWith("/app/groups")) {
     content = <Groups />;
@@ -520,7 +505,7 @@ const ChatLayout = () => {
             <button
               type="button"
               className="app-navbar__menu-btn app-navbar__back-btn"
-              onClick={() => navigate("/app/conversations")}
+              onClick={() => navigate(mobileBackPath)}
               aria-label="Back to list"
             >
               ←
@@ -573,7 +558,7 @@ const ChatLayout = () => {
             <aside className="app-sidebar">
               <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
             </aside>
-            <section className="app-conversations">{content}</section>
+            <section  className="app-conversations">{content}</section>
           </>
         )}
 

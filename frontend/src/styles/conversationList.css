@@ -1,7 +1,7 @@
 .page--conversation-list {
   display: grid;
   grid-template-columns: minmax(320px, 520px) minmax(0, 1fr);
-  gap: 24px;
+  gap: 0;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -15,10 +15,16 @@
   display: none;
 }
 
-@media (max-width: 640px) {
+@media (min-width: 415px) and (max-width: 767px) {
+  .page--conversation-list {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
   .conversation-list__sidebar {
-    padding: 16px;
+    padding: 8px;
     gap: 12px;
+    border-radius: 18px;
   }
 
   .conversation-list__toggle {
@@ -26,11 +32,57 @@
   }
 
   .conversation-list__collapsed-chats {
-    max-height: calc(100vh - 250px);
+    max-height: calc(100dvh - 250px);
+  }
+
+  .conversation-list {
+    gap: 3px;
   }
 
   .conversation-list__item {
-    padding: 12px 14px;
+    padding: 11px 13px;
+    gap: 8px;
+    border-radius: 16px;
+  }
+
+  .conversation-list,
+  .conversation-list--scroll {
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 414px) {
+  .page--conversation-list {
+    grid-template-columns: 1fr;
+  }
+
+  .conversation-list__sidebar {
+    padding: 12px;
+    gap: 12px;
+    border-radius: 18px;
+  }
+
+  .conversation-list__toggle {
+    display: none;
+  }
+
+  .conversation-list__collapsed-chats {
+    max-height: calc(100dvh - 250px);
+  }
+
+  .conversation-list {
+    gap: 3px;
+  }
+
+  .conversation-list__item {
+    padding: 10px 12px;
+    gap: 8px;
+    border-radius: 16px;
+  }
+
+  .conversation-list,
+  .conversation-list--scroll {
+    padding-right: 0;
   }
 
   .conversation-list__meta {
@@ -54,7 +106,7 @@
   gap: 16px;
   background: #121212;
   border-radius: 24px;
-  padding: 16px;
+  padding: 8px 16px 16px 16px;
   min-height: 0;
   transition: width 240ms ease, padding 240ms ease;
 }
@@ -86,8 +138,8 @@
 
 .page--groups .conversation-list__scroll-wrapper {
   min-height: 0;
-  height: min(560px, calc(100vh - 240px));
-  max-height: calc(100vh - 320px);
+  height: min(560px, calc(100dvh - 240px));
+  max-height: calc(100dvh - 320px);
   display: flex;
   flex-direction: column;
   margin-left: 10px;
@@ -212,17 +264,29 @@
 .page--groups.page--groups--collapsed .page--groups__header {
   flex-direction: column;
   align-items: center;
-  margin: 0 0 0 10px;
+  margin: 0;
+  gap: 12px;
+}
+
+.page--groups.page--groups--collapsed .page--groups__left {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .page--groups.page--groups--collapsed .page--groups__right {
-  display: flex;
+  display: flex !important;
+  flex-direction: column !important;
   align-items: center;
-  margin: 0 0 0 15px;
+  gap: 12px;
+  margin: 0;
+  width: 100%;
 }
 
 .page--groups.page--groups--collapsed .button.create-group {
   margin: 0;
+  width: 40px;
+  height: 40px;
 }
 
 /* Hide the groups search when conversation list is collapsed */
@@ -244,6 +308,30 @@
   max-height: calc(100vh - 180px);
   overflow-y: auto;
   padding: 8px 0;
+}
+
+/* Desktop-sized padding for groups header */
+@media (min-width: 768px) {
+  .page--groups__header {
+    padding: 12px 12px 0 0;
+    max-width: 100%;
+  }
+
+  .page--groups__right h1 {
+    margin-left: 10px;
+  }
+
+  .page--groups.page--groups--collapsed .page--groups__right h1 {
+    display: block;
+    font-size: 0.9rem;
+  }
+}
+
+/* Mobile: hide Groups heading when collapsed */
+@media (max-width: 767px) {
+  .page--groups.page--groups--collapsed .page--groups__right h1 {
+    display: none;
+  }
 }
 
 .app-content--conversation-collapsed .page--groups .conversation-list__item {
@@ -443,7 +531,7 @@
 
 .conversation-list {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   margin-top: 20px;
   flex: 1 1 auto;
   overflow-y: auto;
@@ -486,9 +574,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 16px 18px;
-  border-radius: 24px;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 20px;
   background: #111827;
   border: 1px solid rgba(255, 255, 255, 0.05);
   color: #e2e8f0;
@@ -568,11 +656,11 @@
   flex: 1;
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .conversation-list__name {
-  font-size: 1rem;
+  font-size: 0.98rem;
   font-weight: 700;
   color: #f8fafc;
   white-space: nowrap;
@@ -582,7 +670,7 @@
 
 .conversation-list__subtitle {
   color: #94a3b8;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

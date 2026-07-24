@@ -25,6 +25,8 @@ type ConversationItem = {
 type AvailableUser = {
   id: string;
   name?: string | null;
+  email?: string | null;
+  imageUrl?: string | null;
 };
 
 const formatRelativeTime = (dateString?: string) => {
@@ -285,25 +287,28 @@ const Groups = () => {
 
   const headerStyle = {
     display: "flex",
+    flexDirection: "column",
     alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 6,
+    justifyContent: "flex-start",
+    gap: 12,
     marginBottom: 20,
     maxWidth: 840,
   } as const;
 
   const leftColumnStyle = {
     display: "flex",
-    flexDirection: "column",
-    gap: 8,
-    alignItems: "flex-start",
+    flexDirection: "row",
+    gap: 0,
+    alignItems: "center",
   } as const;
 
   const rightColumnStyle = {
     display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    width: "100%",
   } as const;
 
   return (
@@ -320,15 +325,13 @@ const Groups = () => {
             aria-expanded={!convCollapsed}
             aria-label={convCollapsed ? "Expand" : "Collapse"}
             title={convCollapsed ? "Expand" : "Collapse"}
-            style={{ marginTop : 17, marginLeft: 15 }}
           > 
             {convCollapsed ? "›" : "‹"}
           </button>
-          <h1 style={{ margin: "0px 10px" }}>Groups</h1>
         </div>
 
         <div className="page--groups__right" style={rightColumnStyle}>
-          {!convCollapsed && <div style={{ height: 40 }} />}
+          <h1 style={{ margin: 0 }}>Groups</h1>
           <button
             aria-label="Create group"
             className="button create-group"
@@ -407,98 +410,250 @@ const Groups = () => {
                 width: "min(540px, 100%)",
                 background: "#111827",
                 border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: 12,
-                padding: 20,
+                borderRadius: 16,
+                padding: 32,
                 boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 24,
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 style={{ margin: "0 0 8px 0" }}>Create group</h3>
-              <input
-                placeholder="Group name (optional)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 8,
-                  border: "1px solid #1f2937",
-                  background: "#0f172a",
-                  color: "#e2e8f0",
-                  marginBottom: 8,
-                }}
-              />
-              <input
-                placeholder="Search users to add"
-                value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 8,
-                  border: "1px solid #1f2937",
-                  background: "#0f172a",
-                  color: "#e2e8f0",
-                  marginBottom: 8,
-                }}
-              />
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700, color: "#f8fafc" }}>
+                  Create a new group
+                </h2>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: "0.9rem", fontWeight: 600, color: "#e2e8f0" }}>
+                    Group name (optional)
+                  </label>
+                  <input
+                    placeholder="e.g., Team Project"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      background: "rgba(15, 23, 42, 0.6)",
+                      color: "#e2e8f0",
+                      fontSize: "0.95rem",
+                      transition: "all 200ms ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(37, 99, 235, 0.5)";
+                      e.currentTarget.style.background = "rgba(15, 23, 42, 1)";
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+                      e.currentTarget.style.background = "rgba(15, 23, 42, 0.6)";
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: "0.9rem", fontWeight: 600, color: "#e2e8f0" }}>
+                    Add members
+                  </label>
+                  <input
+                    placeholder="Search by name..."
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      borderRadius: 10,
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      background: "rgba(15, 23, 42, 0.6)",
+                      color: "#e2e8f0",
+                      fontSize: "0.95rem",
+                      transition: "all 200ms ease",
+                      boxSizing: "border-box",
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(37, 99, 235, 0.5)";
+                      e.currentTarget.style.background = "rgba(15, 23, 42, 1)";
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
+                      e.currentTarget.style.background = "rgba(15, 23, 42, 0.6)";
+                    }}
+                  />
+                </div>
+              </div>
+
               <div
                 style={{
-                  maxHeight: availableUsers.length > 5 ? 220 : "auto",
-                  overflowY: availableUsers.length > 5 ? "auto" : "visible",
-                  paddingRight: 8,
-                  border: "1px solid rgba(255,255,255,0.02)",
-                  borderRadius: 8,
+                  maxHeight: 260,
+                  overflowY: "auto",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(15, 23, 42, 0.4)",
                 }}
               >
                 {filteredAvailableUsers.length === 0 ? (
-                  <div style={{ padding: 12, color: "#94a3b8" }}>
-                    No users found.
+                  <div style={{ padding: "24px 16px", textAlign: "center", color: "#94a3b8" }}>
+                    {memberSearch ? "No users found." : "No users available."}
                   </div>
                 ) : (
-                  filteredAvailableUsers.map((u) => (
-                    <label
-                      key={u.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "8px 12px",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={!!selected[u.id]}
-                        onChange={() => toggle(u.id)}
-                      />
-                      <span style={{ color: "#e2e8f0" }}>
-                        {u.name || "Unknown"}
-                      </span>
-                    </label>
-                  ))
+                  filteredAvailableUsers.map((u) => {
+                    const isSelected = !!selected[u.id];
+                    const initials = (u.name || "U")
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2);
+                    return (
+                      <label
+                        key={u.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                          padding: "12px 16px",
+                          cursor: "pointer",
+                          borderBottom: "1px solid rgba(255,255,255,0.04)",
+                          transition: "all 150ms ease",
+                          background: isSelected ? "rgba(37, 99, 235, 0.1)" : "transparent",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isSelected) {
+                            e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = isSelected
+                            ? "rgba(37, 99, 235, 0.1)"
+                            : "transparent";
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggle(u.id)}
+                          style={{
+                            width: 18,
+                            height: 18,
+                            cursor: "pointer",
+                            accentColor: "#2563eb",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: "50%",
+                            background: u.imageUrl
+                              ? "transparent"
+                              : isSelected
+                                ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
+                                : "linear-gradient(135deg, #334155, #1e293b)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "0.85rem",
+                            fontWeight: 600,
+                            color: isSelected ? "#e0e7ff" : "#cbd5e1",
+                            backgroundImage: u.imageUrl ? `url("${u.imageUrl}")` : undefined,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {!u.imageUrl && initials}
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+                          <span
+                            style={{
+                              color: "#e2e8f0",
+                              fontSize: "0.95rem",
+                              fontWeight: isSelected ? 600 : 500,
+                            }}
+                          >
+                            {u.name || "Unknown"}
+                          </span>
+                          {u.email && (
+                            <span
+                              style={{
+                                color: "#94a3b8",
+                                fontSize: "0.85rem",
+                              }}
+                            >
+                              {u.email}
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })
                 )}
               </div>
+
               <div
                 style={{
-                  marginTop: 12,
                   display: "flex",
-                  flexDirection: "row-reverse",
-                  gap: 8,
+                  gap: 12,
+                  justifyContent: "flex-end",
                 }}
               >
+                <button
+                  className="button"
+                  onClick={closeForm}
+                  style={{
+                    background: "transparent",
+                    color: "#cbd5e1",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    fontWeight: 600,
+                    padding: "11px 24px",
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    transition: "all 200ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)";
+                  }}
+                >
+                  Cancel
+                </button>
                 <button
                   className="button"
                   onClick={handleCreate}
                   disabled={isCreating}
+                  style={{
+                    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                    color: "#ffffff",
+                    border: "none",
+                    fontWeight: 600,
+                    padding: "11px 28px",
+                    borderRadius: 10,
+                    cursor: isCreating ? "not-allowed" : "pointer",
+                    transition: "all 200ms ease",
+                    opacity: isCreating ? 0.7 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isCreating) {
+                      e.currentTarget.style.boxShadow = "0 8px 16px rgba(37, 99, 235, 0.3)";
+                      e.currentTarget.style.transform = "translateY(-1px)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = "none";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
                 >
                   {isCreating ? "Creating…" : "Create group"}
-                </button>
-                <button
-                  className="button"
-                  onClick={closeForm}
-                  style={{ background: "#374151", borderColor: "#4b5563" }}
-                >
-                  Cancel
                 </button>
               </div>
             </div>

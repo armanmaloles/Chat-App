@@ -17,9 +17,10 @@ type MessageInputProps = {
   pendingAttachments?: PendingAttachment[];
   onRemoveAttachment?: (index: number) => void;
   disabled?: boolean;
+  isSending?: boolean;
 };
 
-const MessageInput = ({ value, onChange, onSend, onFileSelect, pendingAttachments = [], onRemoveAttachment, disabled = false }: MessageInputProps) => {
+const MessageInput = ({ value, onChange, onSend, onFileSelect, pendingAttachments = [], onRemoveAttachment, disabled = false, isSending = false }: MessageInputProps) => {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files ? Array.from(event.target.files) : null;
     if (onFileSelect) {
@@ -85,8 +86,20 @@ const MessageInput = ({ value, onChange, onSend, onFileSelect, pendingAttachment
             style={{ order: 1, width: "100%", border: "none", background: "transparent", outline: "none", padding: 0, color: "#e2e8f0" }}
           />
         </div>
-        <button onClick={onSend} className="message-input__button" disabled={disabled}>
-          Send
+        <button
+          onClick={onSend}
+          className="message-input__button"
+          disabled={disabled || isSending}
+          aria-label={isSending ? "Sending message" : "Send message"}
+          title={isSending ? "Sending message" : "Send message"}
+        >
+          {isSending ? (
+            <span className="message-input__send-spinner" aria-hidden="true">
+              ⏳
+            </span>
+          ) : (
+            <span aria-hidden="true">➤</span>
+          )}
         </button>
       </div>
     </div>

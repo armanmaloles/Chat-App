@@ -9,7 +9,7 @@
   display: grid;
   gap: 12px;
   overflow-y: auto;
-  max-height: calc(100vh - 300px);
+  max-height: calc(100dvh - 300px);
   padding-right: 4px;
 }
 
@@ -78,9 +78,9 @@
   width: fit-content;
   align-self: flex-start;
 }
-@media (max-width: 640px) {
+@media (max-width: 414px) {
   .chat-window__messages {
-    max-height: calc(100vh - 240px);
+    max-height: calc(100dvh - 240px);
   }
 
   .chat-window__footer {

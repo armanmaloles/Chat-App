@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import {
+  getConversation,
   getConversationMessages,
   sendMessage,
   deleteMessage,
@@ -26,6 +27,8 @@ type BackendMessage = {
   sender?: {
     id?: string;
     name?: string | null;
+    imageUrl?: string | null;
+    email?: string | null;
   };
 };
 
@@ -34,6 +37,7 @@ type ChatMessage = {
   author: string;
   content: string;
   senderId: string;
+  avatarUrl?: string | null;
   attachments?: MessageAttachment[];
   createdAt?: string;
   deleted?: boolean;
@@ -127,6 +131,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
   const [pendingAttachmentsByConversation, setPendingAttachmentsByConversation] = useState<Record<string, MessageAttachment[]>>({});
   const [isSending, setIsSending] = useState(false);
   const [isConversationLoaded, setIsConversationLoaded] = useState(false);
+  const [isGroupConversation, setIsGroupConversation] = useState(false);
   const [typingUsers, setTypingUsers] = useState<Array<{ userId: string; userName: string }>>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const typingDebounceRef = useRef<number | null>(null);
@@ -196,10 +201,16 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
 
       try {
         const token = await getToken();
-        const [messagesResponse, typingResponse] = await Promise.all([
+        const [conversationResponse, messagesResponse, typingResponse] = await Promise.all([
+          getConversation(conversationId, token),
           getConversationMessages(conversationId, token),
           getTypingStatus(conversationId, token),
         ]);
+
+        const conversation = conversationResponse.data as {
+          isGroup?: boolean;
+        };
+        setIsGroupConversation(Boolean(conversation.isGroup));
 
         setMessages(
           messagesResponse.data
@@ -213,6 +224,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
                     : message.sender?.name || "Unknown",
                 content: parsedContent.text,
                 senderId: message.sender?.id || "",
+                avatarUrl: message.sender?.imageUrl ?? null,
                 attachments: parsedContent.attachments,
                 createdAt: message.createdAt,
                 deleted: parsedContent.deleted,
@@ -445,6 +457,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
             : createdMessage.sender?.name || "You",
         content: parsedContent.text,
         senderId: createdMessage.sender?.id || user.id,
+        avatarUrl: createdMessage.sender?.imageUrl ?? user.imageUrl ?? null,
         attachments: parsedContent.attachments,
         createdAt: createdMessage.createdAt || new Date().toISOString(),
       };
@@ -491,6 +504,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
               key={message.id}
               author={message.author}
               content={message.content}
+              avatarUrl={message.avatarUrl}
               attachments={message.attachments}
               createdAt={message.createdAt}
               isOwn={message.senderId === user?.id}
@@ -498,6 +512,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
               deletedByName={message.deletedByName}
               onDelete={message.senderId === user?.id && !message.deleted ? () => void handleDeleteMessage(message.id) : undefined}
               isSystemMessage={message.isSystemMessage}
+              showAuthor={isGroupConversation}
             />
           ))
         )}
@@ -522,6 +537,7 @@ const ChatWindow = ({ conversationId }: { conversationId?: string }) => {
             pendingAttachments={currentPendingAttachments}
             onRemoveAttachment={handleRemoveAttachment}
             disabled={isSending}
+            isSending={isSending}
           />
         )}
       </div>

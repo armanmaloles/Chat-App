@@ -215,12 +215,21 @@ export const getConversationMembers = async (
 export const sendMessage = async (
   data: NewMessage
 ) => {
-  const [message] = await db
+  const [insertedMessage] = await db
     .insert(messages)
     .values(data)
     .returning();
 
-  return message;
+  if (!insertedMessage) {
+    return null;
+  }
+
+  return db.query.messages.findFirst({
+    where: eq(messages.id, insertedMessage.id),
+    with: {
+      sender: true,
+    },
+  });
 };
 
 export const getMessageById = async (

@@ -117,22 +117,9 @@ const ChatRoom = () => {
 
         if (conversation.isGroup) {
           const groupName = conversation.name || "Group chat";
-          const memberNames = conversation.members
-            ?.map((member) => member.user)
-            .filter(
-              (
-                userInfo,
-              ): userInfo is {
-                id: string;
-                name?: string | null;
-                email?: string | null;
-              } => Boolean(userInfo && userInfo.id !== user.id),
-            )
-            .map((member) => member.name || member.email || "Unknown")
-            .join(", ");
 
           setTitle(groupName);
-          setSubtitle(memberNames ? `Members: ${memberNames}` : "Group chat");
+          setSubtitle("");
           setMembers(conversation.members || []);
 
           const currentMember = conversation.members?.find(
@@ -166,7 +153,7 @@ const ChatRoom = () => {
             conversation.name ||
             "Unknown";
 
-          setTitle(`Chat with ${name}`);
+          setTitle(name);
           setSubtitle("");
         }
       } catch (error) {
@@ -345,7 +332,8 @@ const ChatRoom = () => {
                 onMouseEnter={() => setCloseButtonHovered(true)}
                 onMouseLeave={() => setCloseButtonHovered(false)}
               >
-                Close
+                <span className="chat-room__settings-close-text">Close</span>
+                <span className="chat-room__settings-close-icon">×</span>
               </button>
             </div>
 

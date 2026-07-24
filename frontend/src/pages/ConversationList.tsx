@@ -121,6 +121,10 @@ const ConversationList = ({
                   other.conversation.id === item.conversation.id,
               ) === index,
           )
+          .filter(
+            (item: ConversationItem) =>
+              item.conversation.messages && item.conversation.messages.length > 0,
+          )
           .sort((a: ConversationItem, b: ConversationItem) => {
             const aTime = a.conversation.messages?.[0]?.createdAt;
             const bTime = b.conversation.messages?.[0]?.createdAt;
